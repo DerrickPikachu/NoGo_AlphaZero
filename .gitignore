@@ -3,3 +3,6 @@
 test
 test.cpp
 /TCG2021_HollowNoGo_MCTS
+/.vscode
+/mcts/game/self_play
+/mcts/game/nogo
