@@ -7,3 +7,4 @@ test.cpp
 /mcts/game/self_play
 /mcts/game/nogo
 /mcts/build
+/*/.vscode
