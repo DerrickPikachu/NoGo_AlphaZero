@@ -3,7 +3,8 @@
 
 #include "episode.h"
 #include "agent.h"
-#include "trajectory.pb.h"
+#include "proto/trajectory.pb.h"
+#include "self_play.h"
 
 void self_play_loop(player& black, player& white) {
     while (true) {
@@ -22,7 +23,7 @@ void self_play_loop(player& black, player& white) {
 }
 
 int main(int argc, const char* argv[]) {
-    trajectory test;
+    // SelfPlayEngine engine;
     std::cout << "=====Traning Self Play=====" << std::endl;
     std::string player_arg = 
         "simulation=1000 explore=0.3 uct=normal parallel=1";

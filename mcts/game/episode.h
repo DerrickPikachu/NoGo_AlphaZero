@@ -21,7 +21,23 @@
 
 class statistic;
 
-class episode {
+class EpisodeInterface {
+public:
+	virtual ~EpisodeInterface() {}
+	virtual board& state() = 0;
+	virtual const board& state() const = 0;
+	virtual board::reward score() const = 0;
+	virtual void open_episode(const std::string& tag) = 0;
+	virtual void close_episode(const std::string& tag) = 0;
+	virtual bool apply_action(action move) = 0;
+	virtual agent& take_turns(agent& black, agent& white) = 0;
+	virtual agent& last_turns(agent& black, agent& white) = 0;
+	virtual size_t step(unsigned who) const = 0;
+	virtual time_t time(unsigned who) const = 0;
+	virtual std::vector<action> actions(unsigned who = -1u) const = 0;
+};
+
+class episode : EpisodeInterface {
 friend class statistic;
 public:
 	episode() : ep_state(initial_state()), ep_score(0), ep_time(0) {
@@ -29,33 +45,33 @@ public:
 	}
 
 public:
-	board& state() { return ep_state; }
-	const board& state() const { return ep_state; }
-	board::reward score() const { return ep_score; }
+	board& state() override { return ep_state; }
+	const board& state() const override { return ep_state; }
+	board::reward score() const override { return ep_score; }
 
-	void open_episode(const std::string& tag) {
+	void open_episode(const std::string& tag) override {
 		ep_open = { tag, millisec() };
 	}
-	void close_episode(const std::string& tag) {
+	void close_episode(const std::string& tag) override {
 		ep_close = { tag, millisec() };
 	}
-	bool apply_action(action move) {
+	bool apply_action(action move) override {
 		board::reward reward = move.apply(state());
 		if (reward != board::legal) return false;
 		ep_moves.emplace_back(move, reward, millisec() - ep_time);
 		ep_score += reward;
 		return true;
 	}
-	agent& take_turns(agent& black, agent& white) {
+	agent& take_turns(agent& black, agent& white) override {
 		ep_time = millisec();
 		return (step() % 2) ? white : black;
 	}
-	agent& last_turns(agent& black, agent& white) {
+	agent& last_turns(agent& black, agent& white) override {
 		return take_turns(white, black);
 	}
 
 public:
-	size_t step(unsigned who = -1u) const {
+	size_t step(unsigned who = -1u) const override {
 		int size = ep_moves.size();
 		switch (who) {
 		case board::black:
@@ -67,7 +83,7 @@ public:
 		}
 	}
 
-	time_t time(unsigned who = -1u) const {
+	time_t time(unsigned who = -1u) const override {
 		time_t time = 0;
 		switch (who) {
 		case board::black:
@@ -86,7 +102,7 @@ public:
 		return time;
 	}
 
-	std::vector<action> actions(unsigned who = -1u) const {
+	std::vector<action> actions(unsigned who = -1u) const override {
 		std::vector<action> res;
 		switch (who) {
 		case board::black:
