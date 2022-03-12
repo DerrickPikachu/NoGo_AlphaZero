@@ -13,6 +13,9 @@
 #include <random>
 #include <ctime>
 
+#include "board.h"
+#include "action.h"
+
 // name=mcts simulation=10000 explore=0.5 uct=normal parallel=4
 
 class Mcts {

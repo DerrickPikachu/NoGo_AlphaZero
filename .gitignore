@@ -6,3 +6,4 @@ test.cpp
 /.vscode
 /mcts/game/self_play
 /mcts/game/nogo
+/mcts/build

@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+message trajectory {
+    message transition {
+        repeated float state = 1;
+        int32 action_id = 2;
+        float reward = 3;
+    }
+    repeated transition transitions = 1;
+}
