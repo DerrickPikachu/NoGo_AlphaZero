@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 project(my_project)
+find_package(Protobuf REQUIRED)
+include_directories(${Protobuf_INCLUDE_DIRS})
 add_subdirectory(proto)
 
 # GoogleTest requires at least C++11
@@ -13,29 +15,29 @@ FetchContent_Declare(
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
 enable_testing()
 include_directories(game)
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
 add_executable(
-  hello_test
-  hello_test.cc
+  mcts_test
+  mcts_test.cc
 )
 
 add_executable(
-  self_play
-  self_play.cpp
+  actor
+  actor.cpp
 )
 
 target_link_libraries(
-  hello_test
+  mcts_test
   gtest_main
 )
 
 target_link_libraries(
-  self_play proto
+  actor proto
 )
 
 include(GoogleTest)
-gtest_discover_tests(hello_test)
+gtest_discover_tests(mcts_test)
