@@ -20,11 +20,24 @@ public:
   MOCK_CONST_METHOD1(actions, std::vector<action>(unsigned who));
 };
 
+class AgentMock : public agent {
+public:
+  MOCK_METHOD1(open_episode, void(const std::string& flag));
+  MOCK_METHOD1(close_episode, void(const std::string& flag));
+  MOCK_METHOD1(take_action, action(const board& b));
+  MOCK_METHOD1(check_for_win, bool(const board& b));
+  MOCK_CONST_METHOD1(property, std::string(const std::string& key));
+  MOCK_METHOD1(notify, void(const std::string& msg));
+  MOCK_CONST_METHOD0(name, std::string());
+  MOCK_CONST_METHOD0(role, std::string());
+};
+
 class EngineMock : public EngineInterface {
 public:
   MOCK_METHOD1(init_game, void(EpisodeInterface* game));
   MOCK_METHOD0(open_episode, void());
-  MOCK_METHOD1(close_episode, void(std::string));
-  MOCK_METHOD0(next_action, action());
-  MOCK_METHOD1(store_transition, void(const action&));
+  MOCK_METHOD0(close_episode, agent&());
+  MOCK_METHOD0(do_next_action, action());
+  MOCK_METHOD1(apply_action, bool(action move));
+  MOCK_METHOD1(store_transition, void(const action::place& move));
 };

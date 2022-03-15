@@ -44,6 +44,10 @@ public:
 	virtual std::string name() const { return property("name"); }
 	virtual std::string role() const { return property("role"); }
 
+	bool operator ==(const agent& other) const {
+		return this->name() == other.name() && this->role() == other.role();
+	}
+
 protected:
 	typedef std::string key;
 	struct value {

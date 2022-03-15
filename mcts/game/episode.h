@@ -37,7 +37,7 @@ public:
 	virtual std::vector<action> actions(unsigned who = -1u) const = 0;
 };
 
-class episode : EpisodeInterface {
+class episode : public EpisodeInterface {
 friend class statistic;
 public:
 	episode() : ep_state(initial_state()), ep_score(0), ep_time(0) {
