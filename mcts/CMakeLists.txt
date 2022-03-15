@@ -38,6 +38,7 @@ target_link_libraries(
   gtest_main
   gtest
   gmock
+  proto
 )
 
 target_link_libraries(
