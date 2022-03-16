@@ -100,7 +100,7 @@ TEST_F(SelfPlayEngineTest, CloseEpisodeTest) {
   EXPECT_EQ(transition->reward(), -1.0);
 }
 
-TEST_F(SelfPlayEngineTest, doNextActionTest) {
+TEST_F(SelfPlayEngineTest, NextActionTest) {
   // Test do_next_action()
   /*
   * This function should choose the correct player to play the game,
@@ -117,7 +117,7 @@ TEST_F(SelfPlayEngineTest, doNextActionTest) {
   EXPECT_CALL(player_mock, take_action(dummy_board))
     .WillOnce(Return(dummy_move));
   engine->init_game(&episode_mock);
-  action choosen_action = engine->do_next_action();
+  action choosen_action = engine->next_action();
   EXPECT_EQ(std::string(((action::place)choosen_action).position()),
     std::string(dummy_move.position()));
 }

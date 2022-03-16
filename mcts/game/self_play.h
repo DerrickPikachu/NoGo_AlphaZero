@@ -11,12 +11,12 @@ public:
     virtual void init_game(EpisodeInterface* game) = 0;
     virtual void open_episode() = 0;
     virtual agent& close_episode() = 0;
-    virtual action do_next_action() = 0;
+    virtual action next_action() = 0;
     virtual bool apply_action(action move) = 0;
     virtual void store_transition(const action::place&) = 0;
 };
 
-class SelfPlayEngine : EngineInterface{
+class SelfPlayEngine : public EngineInterface{
 public:
     SelfPlayEngine(agent* black, agent* white) {
         black_ = black;
@@ -36,7 +36,6 @@ public:
     }
 
     agent& close_episode() override {
-        // TODO: Need to setup the last transition reward and action
         agent& winner = game_->last_turns(*black_, *white_);
         game_->close_episode(winner.role());
         int num_transition = trajectory_buffer.transitions_size();
@@ -49,7 +48,7 @@ public:
         return winner;
     }
 
-    action do_next_action() override {
+    action next_action() override {
         agent& who = game_->take_turns(*black_, *white_);
         action choosen_action = who.take_action(game_->state());
         return choosen_action;
