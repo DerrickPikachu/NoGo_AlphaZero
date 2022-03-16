@@ -39,6 +39,13 @@ public:
         // TODO: Need to setup the last transition reward and action
         agent& winner = game_->last_turns(*black_, *white_);
         game_->close_episode(winner.role());
+        int num_transition = trajectory_buffer.transitions_size();
+        auto* transition = trajectory_buffer.mutable_transitions(num_transition - 1);
+        if (winner.role() == "black") {
+            transition->set_reward(1.0);
+        } else if (winner.role() == "white") {
+            transition->set_reward(-1.0);
+        }
         return winner;
     }
 
