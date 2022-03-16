@@ -68,7 +68,7 @@ TEST_F(SelfPlayEngineTest, CloseEpisodeTest) {
   // Test the close_episode()
   /*
   * This function should identify the winner, 
-  * and call the closse episode of episode
+  * and call the close episode of episode
   */
   EpisodeMock episode_mock;
   agent dummy_winner("name=test");
@@ -102,10 +102,14 @@ TEST_F(SelfPlayEngineTest, doNextActionTest) {
   engine->init_game(&episode_mock);
   action choosen_action = engine->do_next_action();
   EXPECT_EQ(std::string(((action::place)choosen_action).position()),
-   std::string(dummy_move.position()));
+    std::string(dummy_move.position()));
 }
 
 TEST_F(SelfPlayEngineTest, applyLegalActionTest) {
+  // Test apply_action()
+  /*
+  * Try to apply a legal action to the game
+  */
   action::place dummy_move(0, board::black);
   EpisodeMock episode_mock;
   EXPECT_CALL(episode_mock, apply_action(dummy_move))
@@ -116,6 +120,10 @@ TEST_F(SelfPlayEngineTest, applyLegalActionTest) {
 }
 
 TEST_F(SelfPlayEngineTest, applyIllegalActionTest) {
+  // Test apply_action()
+  /*
+  * Try to apply a illegal action to the game
+  */
   action::place dummy_move(0, board::black);
   EpisodeMock episode_mock;
   EXPECT_CALL(episode_mock, apply_action(dummy_move))
@@ -126,6 +134,10 @@ TEST_F(SelfPlayEngineTest, applyIllegalActionTest) {
 }
 
 TEST_F(SelfPlayEngineTest, storeTransitionTest) {
+  // Test store_transition()
+  /*
+  * Check that after applying
+  */
   trajectory answer;
   for (int i = 0; i < 2; i++) {
     trajectory::transition* answer_transition = answer.add_transitions();
