@@ -68,19 +68,36 @@ TEST_F(SelfPlayEngineTest, CloseEpisodeTest) {
   // Test the close_episode()
   /*
   * This function should identify the winner, 
-  * and call the close episode of episode
+  * and call the close episode of episode.
+  * Additionally, it also needs to setup the last transition reward.
   */
   EpisodeMock episode_mock;
-  agent dummy_winner("name=test");
+  agent dummy_winner("name=test role=white");
+  board dummy_board;
+  std::string episode_str = black_->name() + ":" + white_->name();
   EXPECT_CALL(episode_mock, last_turns(*black_, *white_))
     .WillOnce(ReturnRef(dummy_winner));
   EXPECT_CALL(episode_mock, close_episode(dummy_winner.role()))
     .Times(1);
+  EXPECT_CALL(episode_mock, open_episode(episode_str));
+  EXPECT_CALL(episode_mock, state())
+    .WillOnce(ReturnRef(dummy_board));
   engine->init_game(&episode_mock);
+  engine->open_episode();
   agent& winner = engine->close_episode();
+
   std::string winner_name = winner.name();
   std::string winner_name_ = dummy_winner.name();
   EXPECT_EQ(winner_name, winner_name_);
+
+  std::string raw = engine->get_trajectory();
+  trajectory parsed_raw;
+  ASSERT_EQ(parsed_raw.ParseFromString(raw), true);
+  int num_transition = parsed_raw.transitions_size();
+  ASSERT_EQ(num_transition, 1);
+  trajectory::transition* transition = 
+    parsed_raw.mutable_transitions(num_transition - 1);
+  EXPECT_EQ(transition->reward(), -1.0);
 }
 
 TEST_F(SelfPlayEngineTest, doNextActionTest) {
