@@ -22,6 +22,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lgtest -pthread")
 
 include_directories(game)
 include_directories(mock)
+include_directories(socket)
 
 add_executable(
   mcts_test
