@@ -2,9 +2,11 @@
 #include <gmock/gmock.h>
 #include <vector>
 #include <string>
+#include <errno.h>
 
 #include "mock_class.h"
 #include "../proto/trajectory.pb.h"
+#include "trajectory_socket.h"
 using ::testing::AtLeast;
 using ::testing::ReturnRef;
 using ::testing::Return;
@@ -18,6 +20,13 @@ TEST(FrameworkTest, BasicAssertions) {
   EXPECT_EQ(7 * 6, 42);
 }
 
+/*********************************************************************
+* SelfPlayEngineTest
+* In this section, all the test cases are written to test the class 
+* SelfPlayEngineTest.
+* SelfPlayEngine should do the self play and generate the trajectory
+* which is used to train an Neural Network(AlphaZero Resnet)
+**********************************************************************/
 class SelfPlayEngineTest : public ::testing::Test {
 protected:
   void SetUp() override {
@@ -215,6 +224,72 @@ TEST_F(SelfPlayEngineTest, fullTrajectoryTest) {
     EXPECT_EQ(action_id, transitions->at(i).action_id());
   }
   EXPECT_NE(tem_trajectory.transitions_size(), 0);
+} // End of SelfPlayEngineTest
+
+/*********************************************************************
+* TrajectorySocketTest
+* The class TrajectorySocket must connect to the learner, and has the
+* ability of sending an serilized trajectory(protobuf) to learner.
+**********************************************************************/
+class TrajectorySocketTest : public ::testing::Test {
+protected:
+  class TrajectorySocketStub : public TrajectorySocket {
+  public:
+      TrajectorySocketStub(int pipe_write_fd)
+          : TrajectorySocket(), write_fd(pipe_write_fd) {}
+
+      bool connect_server() override {
+          socket_fd = write_fd;
+          return true;
+      }
+
+      int write_fd;
+  };
+
+protected:
+  void SetUp() {
+    pipe(test_pipe);
+    test_socket = new TrajectorySocketStub(test_pipe[1]);
+  }
+
+  void TearDown() {
+    delete test_socket;
+    close(test_pipe[0]);
+    close(test_pipe[1]);
+  }
+
+  SocketInterface* test_socket;
+  int test_pipe[2];
+};
+
+TEST_F(TrajectorySocketTest, sendTest) {
+  trajectory test_trajectory;
+  auto* transition = test_trajectory.add_transitions();
+  transition->set_action_id(10);
+  transition->set_reward(100);
+  std::string raw;
+  test_trajectory.SerializeToString(&raw);
+  test_socket->connect_server();
+  test_socket->send(raw);
+
+  char buffer[1024] = {0};
+  int num_read = read(test_pipe[0], buffer, 1024);
+  std::string received_raw;
+  received_raw.reserve(num_read);
+  for (int i = 0; i < num_read; i++) {
+    received_raw.push_back(buffer[i]);
+  }
+  EXPECT_EQ(raw, received_raw);
+}
+
+TEST_F(TrajectorySocketTest, receiveTest) {
+  delete test_socket;
+  test_socket = new TrajectorySocketStub(test_pipe[0]);
+  std::string message = "OK";
+  test_socket->connect_server();
+  write(test_pipe[1], message.c_str(), message.size());
+  std::string received = test_socket->receive();
+  EXPECT_EQ(message, received);
 }
 
 int main(int argc, char** argv) {
