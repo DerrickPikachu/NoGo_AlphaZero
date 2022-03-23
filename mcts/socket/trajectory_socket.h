@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include <ext/stdio_filebuf.h>
 
 class SocketInterface {
 public:
@@ -49,10 +48,13 @@ public:
 private:
     void setup_socket() {
         socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+        if (socket_fd < 0) {
+            std::cerr << "build socket failed" << std::endl;
+            exit(0);
+        }
         server_address.sin_family = AF_INET;
         server_address.sin_addr.s_addr = inet_addr(server_host.c_str());
-        server_address.sin_port = server_port;
-        __gnu_cxx::stdio_filebuf<char> filebuf(socket_fd, std::ios::in);
+        server_address.sin_port = htons(server_port);
     }
 
 protected:
