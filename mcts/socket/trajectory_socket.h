@@ -36,7 +36,9 @@ public:
     std::string receive() override {
         memset(buffer, 0, sizeof(buffer));
         int size = read(socket_fd, buffer, sizeof(buffer));
-        buffer[size] = 0;
+        std::string raw;
+        for (int i = 0; i < size; i++)
+            raw.push_back(buffer[i]);
         return std::string(buffer);
     }
 
