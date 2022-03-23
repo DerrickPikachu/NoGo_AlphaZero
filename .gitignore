@@ -9,3 +9,4 @@ test.cpp
 /mcts/build
 /*/.vscode
 /build
+/train/__pycache__
