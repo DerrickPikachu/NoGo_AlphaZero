@@ -3,6 +3,7 @@ import trajectory_pb2 as trajectory
 
 
 def self_play_loop(actor_socket: TrajectoryServer):
+    # file = open('test_trajectory', 'wb')
     while True:
         byte_int = actor_socket.recv(4)
         size = 0
@@ -14,6 +15,7 @@ def self_play_loop(actor_socket: TrajectoryServer):
         print("receive raw data len: {}".format(len(raw)))
         parsed_trajectory = trajectory.trajectory()
         parsed_trajectory.ParseFromString(raw)
+        # file.write(parsed_trajectory.SerializeToString())
         print("num_transition: ", len(parsed_trajectory.transitions))
         print("last reward: ", parsed_trajectory.transitions[-1].reward)
 
