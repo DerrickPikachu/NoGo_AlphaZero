@@ -54,10 +54,15 @@ class ReplayBufferTest(unittest.TestCase):
             state_tensor = torch.tensor(tran.state)
             transition = Transition(state_tensor, tran.action_id, tran.reward)
             self.replay_buffer.append(transition)
-        sampled_index = self.replay_buffer.sample(num_samples=10)
-        self.assertEqual(len(sampled_index), 10)
-        for index in sampled_index:
-            self.assertTrue(index < len(self.replay_buffer) and index >= 0)
-
+        sampled_transitions = self.replay_buffer.sample(num_samples=10)
+        self.assertEqual(len(sampled_transitions), 10)
+        founded = 0
+        for transitions in sampled_transitions:
+            for i in range(len(self.replay_buffer)):
+                if self.replay_buffer[i].action == transitions.action:
+                    founded += 1
+                    break
+        self.assertEqual(founded, 10)
+        
 if __name__ == "__main__":
     unittest.main()
