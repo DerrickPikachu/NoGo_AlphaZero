@@ -28,8 +28,6 @@ void self_play_loop(player& black, player& white) {
         agent& winner = engine->close_episode();
         std::string raw_trajectory = 
             ((SelfPlayEngine*)engine)->get_trajectory();
-        // TODO: send the raw trajectory to learner
-        std::cerr << winner.role() << std::endl;
         trajectory tra;
         tra.ParseFromString(raw_trajectory);
         std::cerr << "num_transition: " << tra.transitions_size() << std::endl;
@@ -46,7 +44,6 @@ void self_play_loop(player& black, player& white) {
 }
 
 int main(int argc, const char* argv[]) {
-    // SelfPlayEngine engine;
     std::cerr << "=====Traning Self Play=====" << std::endl;
     std::string player_arg = 
         "simulation=1000 explore=0.3 uct=normal parallel=1";
