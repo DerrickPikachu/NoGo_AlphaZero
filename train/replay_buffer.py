@@ -37,7 +37,6 @@ class BufferInterface(abc.ABC):
 class ReplayBuffer(BufferInterface):
     def __init__(self, buffer_size: int) -> None:
         super().__init__(buffer_size)
-        # TODO: use deque to be the buffer
         self.size = buffer_size
         self.buffer = deque([], maxlen=buffer_size)
         
@@ -47,7 +46,6 @@ class ReplayBuffer(BufferInterface):
             self.buffer.popleft()
             
     def sample(self, num_samples) -> list:
-        # TODO: return a list of transition, not index array
         return random.sample(self.buffer, num_samples)
     
     def __len__(self) -> int:
