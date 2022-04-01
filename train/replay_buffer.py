@@ -1,21 +1,16 @@
 import abc
 from collections import deque, namedtuple
 from sys import maxsize
+from torch.utils.data import Dataset
 import torch
 import random
 
 
-# class Transition:
-#     def __init__(self, state:torch.Tensor, action:int, 
-#                  reward:float) -> None:
-#         self.state = state
-#         self.action = action
-#         self.reward = reward
 Transition = namedtuple('Transition', 
                         ('state', 'action', 'reward'))
 
 
-class BufferInterface(abc.ABC):
+class BufferInterface(Dataset):
     def __init__(self, buffer_size:int) -> None:
         pass
     
