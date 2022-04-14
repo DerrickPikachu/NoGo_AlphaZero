@@ -31,17 +31,21 @@ class TrainerInterface(abc.ABC):
     
     
 class Trainer(TrainerInterface):
-    def __init__(self) -> None:
+    def __init__(self, config: dict) -> None:
         super().__init__()
         self.policy_loss_func = torch.nn.CrossEntropyLoss()
         self.value_loss_func = torch.nn.MSELoss()
-        self.network = AlphaZeroResnet(1, 10, input_size=(9, 9))
+        self.network = AlphaZeroResnet(
+            config['model']['input_channels'],
+            config['model']['block_nums'],
+            input_size=config['model']['input_size']
+        )
         self.optimizer = torch.optim.SGD(
             self.network.parameters(),
-            lr=0.1,
-            momentum=0.9,
-            weight_decay=1.e-4,
-            nesterov=True
+            lr=config['optimizer']['learning_rate'],
+            momentum=config['optimizer']['momentum'],
+            weight_decay=config['optimizer']['weight_decay'],
+            nesterov=config['optimizer']['nesterov']
         )
         self.network.train()
         self.network.to(device)

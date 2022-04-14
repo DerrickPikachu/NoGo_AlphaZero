@@ -4,6 +4,8 @@ import torch
 import trajectory_pb2 as trajectory
 from torch.utils.data import DataLoader
 from torchtest import assert_vars_change
+import yaml
+from pathlib import Path
 
 from replay_buffer import *
 from trainer import *
@@ -89,7 +91,8 @@ class ReplayBufferTest(unittest.TestCase):
         
 class TrainerTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.trainer = Trainer()
+        config = yaml.safe_load(Path('learner_config.yaml').read_text())
+        self.trainer = Trainer(config)
         trajectory_file = open('test_trajectory', 'rb')
         raw = trajectory_file.read()
         trajectory_pb = trajectory.trajectory()

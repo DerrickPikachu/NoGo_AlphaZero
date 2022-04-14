@@ -1,0 +1,17 @@
+model:
+  block_nums: 10
+  input_channels: 1
+  input_size: [9, 9]
+
+optimizer:
+  learning_rate: 0.02
+  momentum: 0.9
+  weight_decay: 1.e-4
+  nesterov: True
+
+trainer:
+  batch_size: 256
+  checkpoint_freq: 5
+
+replayer_buffer:
+  size: 1024
