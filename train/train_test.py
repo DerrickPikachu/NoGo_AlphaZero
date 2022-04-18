@@ -3,7 +3,7 @@ from unittest import mock
 import torch
 import trajectory_pb2 as trajectory
 from torch.utils.data import DataLoader
-from torchtest import assert_vars_change
+# from torchtest import assert_vars_change
 import yaml
 from pathlib import Path
 
@@ -52,8 +52,10 @@ class ReplayBufferTest(unittest.TestCase):
         self.assertEqual(len(self.replay_buffer), 20)
         trajectory_len = len(self.trajectory_pb.transitions)
         for i in range(20):
-            self.assertEqual(self.replay_buffer[i].action,
-                             self.trajectory_pb.transitions[trajectory_len - 20 + i].action_id)
+            self.assertEqual(
+                self.replay_buffer[i].action,
+                self.trajectory_pb.transitions[trajectory_len - 20 + i].action_id
+            )
         
     def testSample(self):
         for tran in self.trajectory_pb.transitions:
@@ -91,8 +93,8 @@ class ReplayBufferTest(unittest.TestCase):
         
 class TrainerTest(unittest.TestCase):
     def setUp(self) -> None:
-        config = yaml.safe_load(Path('learner_config.yaml').read_text())
-        self.trainer = Trainer(config)
+        self.config = yaml.safe_load(Path('learner_config.yaml').read_text())
+        self.trainer = Trainer(self.config)
         trajectory_file = open('test_trajectory', 'rb')
         raw = trajectory_file.read()
         trajectory_pb = trajectory.trajectory()
@@ -174,7 +176,32 @@ class TrainerTest(unittest.TestCase):
         self.assertTrue(torch.cuda.is_available())
         self.assertTrue(next(self.trainer.network.parameters()).is_cuda)
         
-    
+    def testSaveAndLoadModel(self):
+        # print(self.trainer.optimizer.state_dict())
+        # print(self.trainer.network.state_dict())
+        another_trainer = Trainer(self.config)
+        self.trainer.save_model('test_data/test_checkpoint.pt')
+        another_trainer.load_model('test_data/test_checkpoint.pt')
+        
+        parameters = [np for np in self.trainer.network.parameters()]
+        load_parameters = [np for np in another_trainer.network.parameters()]
+        for p0, p1 in zip(parameters, load_parameters):
+            self.assertTrue(torch.equal(p0, p1))
+        
+        self.assertEqual(self.trainer.optimizer.state_dict(),
+                         another_trainer.optimizer.state_dict())
+        
+    def testSaveWeight(self):
+        self.trainer.save_weight('test_data/test_weight.pth')
+        another_trainer = Trainer(self.config)
+        another_trainer.network.load_state_dict(
+            torch.load('test_data/test_weight.pth'))
+        
+        parameters = [np for np in self.trainer.network.parameters()]
+        load_parameters = [np for np in another_trainer.network.parameters()]
+        for p0, p1 in zip(parameters, load_parameters):
+            self.assertTrue(torch.equal(p0, p1))
+        
         
 if __name__ == "__main__":
     unittest.main()

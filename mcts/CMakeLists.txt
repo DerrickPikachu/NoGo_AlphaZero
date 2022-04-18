@@ -1,11 +1,15 @@
 cmake_minimum_required(VERSION 3.14)
 project(my_project)
 find_package(Protobuf REQUIRED)
-include_directories(${Protobuf_INCLUDE_DIRS})
+message("Protobuf_INCLUDE_DIRS = ${Protobuf_INCLUDE_DIRS}")
+# include_directories(${Protobuf_INCLUDE_DIRS})
 add_subdirectory(proto)
 
 enable_testing()
 find_package(GTest REQUIRED)
+message("GTest_INCLUDE_DIRS = ${GTest_INCLUDE_DIRS}")
+
+# find_package(Torch REQUIRED)
 
 # GoogleTest requires at least C++11
 
@@ -19,6 +23,7 @@ find_package(GTest REQUIRED)
   # FetchContent_MakeAvailable(googletest)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lgtest -pthread")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -lgtest -pthread")
 
 include_directories(game)
 include_directories(mock)
@@ -43,8 +48,11 @@ target_link_libraries(
 )
 
 target_link_libraries(
-  actor proto
+  actor
+  proto
+  # "${TORCH_LIBRARIES}"
 )
+# set_property(TARGET actor PROPERTY CXX_STANDARD 14)
 
 include(GoogleTest)
 gtest_discover_tests(mcts_test)

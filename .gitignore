@@ -11,3 +11,4 @@ test.cpp
 /build
 /train/__pycache__
 /test_framework
+/train/test_data/*

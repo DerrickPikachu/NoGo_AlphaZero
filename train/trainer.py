@@ -81,3 +81,16 @@ class Trainer(TrainerInterface):
         v_loss = self.value_loss_func.forward(value, real_value)
         return p_loss, v_loss
     
+    def save_model(self, path):
+        torch.save({
+            'model_state_dict': self.network.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+        }, path)
+    
+    def load_model(self, path):
+        checkpoint = torch.load(path)
+        self.network.load_state_dict(checkpoint['model_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    
+    def save_weight(self, path):
+        torch.save(self.network.state_dict(), path)
