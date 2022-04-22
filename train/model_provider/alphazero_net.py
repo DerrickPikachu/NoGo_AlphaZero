@@ -1,5 +1,6 @@
 import torch
 import sys
+import argparse
 
 sys.path.append('../')
 
@@ -25,9 +26,10 @@ class Forwarder:
         
 
 class Mediator:
-    def __init__(self) -> None:
+    def __init__(self, path, board_size) -> None:
         # TODO: here needs to use config
-        self.forwarder = Forwarder('test_model')
+        self.forwarder = Forwarder(path)
+        self.board_size = board_size
     
     def process_cmd(self, cmd: str):
         if cmd == 'forward':
@@ -37,6 +39,8 @@ class Mediator:
         elif cmd == 'refresh':
             model_name = input()
             self.refresh_model(model_name)
+        elif cmd == 'exit':
+            return 0
     
     def model_forward(self, board_state):
         preprocess_state = self._preprocess(board_state)
@@ -49,7 +53,8 @@ class Mediator:
         for i in range(len(board_state)):
             tensor_state[i] = int(board_state[i])
         # TODO: here needs to use config
-        return tensor_state.view((1, 1, 9, 9))
+        return tensor_state.view(
+            (1, 1, self.board_size, self.board_size))
     
     def _postprocess(self, raw_policy, raw_value):
         policy = raw_policy.view(81)
@@ -68,3 +73,22 @@ class Mediator:
         encoded_str += ';' + str(value)
         return encoded_str
         
+
+def main():
+    parser = argparse.ArgumentParser(__package__, description=__doc__)
+    parser.add_argument('-p', '--path', required=True, help='The path to saved weight')
+    parser.add_argument('-bs', '--board_size',
+                        type=int,
+                        default=9,
+                        help='The board size of the game')
+    args = parser.parse_args()
+    mediator = Mediator(args.path, args.board_size)
+    while (True):
+        cmd = input()
+        is_exit = mediator.process_cmd(cmd)
+        if is_exit == 0:
+            break
+
+
+if __name__ == "__main__":
+    main()

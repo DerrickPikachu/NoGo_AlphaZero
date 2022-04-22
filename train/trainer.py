@@ -73,7 +73,6 @@ class Trainer(TrainerInterface):
         total_loss = p_loss + v_loss
         total_loss.backward()
         self.optimizer.step()
-        
     
     def compute_loss(self, action: torch.Tensor, value: torch.Tensor,
                      real_action, real_value):

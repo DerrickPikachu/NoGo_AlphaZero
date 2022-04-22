@@ -53,7 +53,7 @@ class ForwarderTest(unittest.TestCase):
         
 class MediatorTest(unittest.TestCase):
     def setUp(self):
-        self.mediator = Mediator()
+        self.mediator = Mediator('test_model', board_size=9)
     
     def tearDown(self):
         del self.mediator
