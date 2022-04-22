@@ -50,6 +50,50 @@ class ForwarderTest(unittest.TestCase):
         for p0, p1 in zip(origin_param, load_param):
             self.assertTrue(torch.equal(p0, p1))
         
+        
+class MediatorTest(unittest.TestCase):
+    def setUp(self):
+        self.mediator = Mediator()
+    
+    def tearDown(self):
+        del self.mediator
+    
+    def testModelForward(self):  # TODO: None test
+        fake_policy = torch.tensor([1 / 81] * 81).view((1, 81))
+        fake_value = torch.tensor([0.5]).view((1, 1))
+        forwarder_mock = MagicMock(spec=Forwarder)
+        forwarder_mock.evaluate.return_value = (fake_policy, fake_value)
+        self.mediator.forwarder = forwarder_mock
+        
+        policy, value = self.mediator.model_forward('0' * 81)
+        
+        preprocess_result = torch.tensor([0.0] * 81).view((1, 1, 9, 9))
+        forwarder_mock.evaluate.assert_called_once()
+        evaluate_args = forwarder_mock.evaluate.call_args
+        self.assertTrue(torch.equal(evaluate_args, preprocess_result))
+        self.assertEqual(value, 0.5)
+        for prob in policy:
+            self.assertAlmostEqual(prob, 1 / 81, delta=0.0001)
+        
+    def testRefreshModel(self):
+        forwarder_mock = MagicMock(spec=Forwarder)
+        self.mediator.forwarder = forwarder_mock
+        self.mediator.refresh_model('test_model')
+        forwarder_mock.load_weight.assert_called_once_with('test_model')
+        
+    def testEncodeResult(self):
+        policy = [1 / 81] * 81
+        value = 0.5
+        ans_str = ''
+        for i in range(81):
+            ans_str += str(1 / 81)
+            if i == 80:
+                ans_str += ';'
+            else:
+                ans_str += ','
+        ans_str += str(value)
+        output_str = self.mediator.encode_result(policy, value)
+        self.assertEqual(output_str, ans_str)
 
 
 if __name__ == "__main__":
