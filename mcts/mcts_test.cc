@@ -7,6 +7,7 @@
 #include "mock_class.h"
 #include "../proto/trajectory.pb.h"
 #include "trajectory_socket.h"
+// #include "alphazero_mcts.h"
 using ::testing::AtLeast;
 using ::testing::ReturnRef;
 using ::testing::Return;
@@ -291,6 +292,112 @@ TEST_F(TrajectorySocketTest, receiveTest) {
   std::string received = test_socket->receive();
   EXPECT_EQ(message, received);
 }
+
+
+class AlphaZeroNetTest : public ::testing::Test {
+protected:
+  class WrapNet : public AlphaZeroNet {
+  public:
+    WrapNet(
+      std::string net_path, std::string weight_path, int board_size) :
+      AlphaZeroNet(net_path, weight_path, board_size) {}
+    
+    void set_write_pipe(PipeInterface* pipe) {
+      write_pipe = pipe;
+    }
+
+    void set_read_pipe (PipeInterface* pipe) {
+      read_pipe = pipe;
+    }
+  };
+
+  void SetUp() override {
+    alphazero_net = new WrapNet(
+      "model_provider/alphazero_net.py",
+      "model_provider/test_model/fake_weight.pth",
+      9
+    );
+    write_pipe = new PipeMock();
+    read_pipe = new PipeMock();
+    alphazero_net->set_write_pipe(write_pipe);
+    alphazero_net->set_read_pipe(read_pipe);
+  }
+
+  void TearDown() override {
+    delete alphazero_net;
+    if (write_pipe != NULL)
+      delete write_pipe;
+    if (read_pipe != NULL)
+      delete read_pipe;
+  }
+
+public:
+  WrapNet* alphazero_net;
+  PipeMock* write_pipe;
+  PipeMock* read_pipe;
+};
+
+TEST_F(AlphaZeroNetTest, forwardResultTest) {
+  board state;
+  std::string fake_state;
+  std::string fake_return;
+  
+  for (int i = 0; i < 81; i++) {
+    fake_state += "0.0,";
+  }
+  fake_state.pop_back();
+  
+  for (int i = 0; i < 81; i++) {
+    fake_return += "0.01234";
+    if (i == 80)
+      fake_return += ";";
+    else
+      fake_return += ",";
+  }
+  fake_return += "0.5";
+
+  EXPECT_CALL(*write_pipe, write("forward\n"));
+  EXPECT_CALL(*write_pipe, write(fake_state + "\n"));
+  EXPECT_CALL(*read_pipe, read())
+    .WillOnce(Return(fake_return));
+  std::string result = alphazero_net->get_forward_result(state);
+}
+
+TEST_F(AlphaZeroNetTest, refreshModelTest) {
+  EXPECT_CALL(*write_pipe, write("refresh\n"));
+  alphazero_net->refresh_model();
+}
+
+TEST_F(AlphaZeroNetTest, sendExitTest) {
+  EXPECT_CALL(*write_pipe, write("exit\n"));
+  EXPECT_CALL(*write_pipe, close_write());
+  EXPECT_CALL(*read_pipe, close_read());
+  alphazero_net->send_exit();
+  write_pipe = NULL;
+  read_pipe = NULL;
+}
+
+TEST_F(AlphaZeroNetTest, parseResultTest) {
+  std::string fake_result;
+  for (int i = 0; i < 81; i++) {
+    fake_result += "0.01234";
+    if (i == 80)
+      fake_result += ";";
+    else
+      fake_result += ",";
+  }
+  fake_result += "0.5";
+  auto parsed_result = alphazero_net->parse_result(fake_result);
+  for (auto& prob : parsed_result.first) {
+    EXPECT_FLOAT_EQ(prob, 0.01234);
+  }
+  EXPECT_FLOAT_EQ(parsed_result.second, 0.5);
+}
+
+// TEST_F(AlphaZeroNetTest, execNetTest) {
+//   alphazero_net->exec_net();
+//   alphazero_net->send_exit();
+// }
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleMock(&argc, argv);
