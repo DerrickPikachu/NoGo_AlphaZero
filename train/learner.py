@@ -26,7 +26,6 @@ def self_play_loop(config: dict, actor_socket: TrajectoryServer):
             state_tensor = torch.tensor(tran.state)
             transition = Transition(state_tensor, tran.action_id, tran.reward)
             replay_buffer.append(transition)
-        # file.write(parsed_trajectory.SerializeToString())
         print("num_transition: ", len(parsed_trajectory.transitions))
         print("last reward: ", parsed_trajectory.transitions[-1].reward)
         print("replay buffer size: ", len(replay_buffer))
