@@ -2,9 +2,10 @@ import torch
 import sys
 import argparse
 
-sys.path.append('../')
+# Specify the project root path
+sys.path.append('/desktop')
 
-from network import AlphaZeroResnet
+from train.network import AlphaZeroResnet
 
 class Forwarder:
     def __init__(self, directory: str) -> None:

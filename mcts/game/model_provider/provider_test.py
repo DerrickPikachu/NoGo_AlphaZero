@@ -4,9 +4,9 @@ import sys
 
 from alphazero_net import *
 
-sys.path.append('../')
+sys.path.append('/desktop')
 
-from network import AlphaZeroResnet
+from train.network import AlphaZeroResnet
 
 
 class ForwarderTest(unittest.TestCase):
