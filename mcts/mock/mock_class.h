@@ -4,6 +4,7 @@
 #include "../game/self_play.h"
 #include "../game/agent.h"
 #include "../game/board.h"
+#include "../game/alphazero_mcts.h"
 
 class EpisodeMock : public EpisodeInterface {
 public:
@@ -40,4 +41,14 @@ public:
   MOCK_METHOD0(do_next_action, action());
   MOCK_METHOD1(apply_action, bool(action move));
   MOCK_METHOD1(store_transition, void(const action::place& move));
+};
+
+class PipeMock : public PipeInterface {
+public:
+  MOCK_METHOD1(write, bool(std::string data));
+  MOCK_METHOD0(read, std::string());
+  MOCK_METHOD0(close_write, void());
+  MOCK_METHOD0(close_read, void());
+  MOCK_METHOD0(redirect_stdout, void());
+  MOCK_METHOD0(redirect_stdin, void());
 };
