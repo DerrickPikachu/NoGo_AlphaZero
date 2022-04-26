@@ -65,7 +65,8 @@ class MediatorTest(unittest.TestCase):
         forwarder_mock.evaluate.return_value = (fake_policy, fake_value)
         self.mediator.forwarder = forwarder_mock
         
-        policy, value = self.mediator.model_forward('0' * 81)
+        test_input = ','.join(['0.0'] * 81)
+        policy, value = self.mediator.model_forward(test_input)
         
         preprocess_result = torch.tensor([0.0] * 81).view((1, 1, 9, 9))
         forwarder_mock.evaluate.assert_called_once()

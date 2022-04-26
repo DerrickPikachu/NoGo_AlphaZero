@@ -49,11 +49,11 @@ class Mediator:
         post_policy, post_value = self._postprocess(policy, value)
         return post_policy, post_value
     
-    def _preprocess(self, board_state):
-        tensor_state = torch.zeros((len(board_state)))
-        for i in range(len(board_state)):
-            tensor_state[i] = int(board_state[i])
-        # TODO: here needs to use config
+    def _preprocess(self, board_state: str):
+        parsed_state = board_state.split(',')
+        tensor_state = torch.zeros(len(parsed_state))
+        for i in range(len(parsed_state)):
+            tensor_state[i] = float(parsed_state[i])
         return tensor_state.view(
             (1, 1, self.board_size, self.board_size))
     
@@ -84,11 +84,13 @@ def main():
                         help='The board size of the game')
     args = parser.parse_args()
     mediator = Mediator(args.path, args.board_size)
-    while (True):
-        cmd = input()
-        is_exit = mediator.process_cmd(cmd)
-        if is_exit == 0:
-            break
+    print(args.path)
+    print(args.board_size)
+    # while (True):
+    #     cmd = input()
+    #     is_exit = mediator.process_cmd(cmd)
+    #     if is_exit == 0:
+    #         break
 
 
 if __name__ == "__main__":

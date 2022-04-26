@@ -6,6 +6,7 @@
 #include "proto/trajectory.pb.h"
 #include "self_play.h"
 #include "trajectory_socket.h"
+#include "alphazero_mcts.h"
 
 
 void self_play_loop(player& black, player& white) {

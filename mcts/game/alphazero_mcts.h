@@ -84,6 +84,7 @@ public:
                 std::cerr << "exec alphazero net error" << std::endl;
                 exit(1);
             }
+            std::cerr << "fail" << std::endl;
         }
     }
 
@@ -120,14 +121,16 @@ public:
 private:
     char** build_args() {
         // python path/to/alphazero_net.py -p path/to/weight -bs 9
-        char** args = new char*[5];
         std::vector<std::string> args_arr({
+            "python",
             path_to_net,
             "-p",
             path_to_weight,
             "-bs",
             std::to_string(board_size)
         });
+        char** args = new char*[args_arr.size() + 1];
+        args[args_arr.size()] = NULL;
         for (int i = 0; i < args_arr.size(); i++) {
             char* char_arg = new char[args_arr[i].size()];
             strcpy(char_arg, args_arr[i].c_str());

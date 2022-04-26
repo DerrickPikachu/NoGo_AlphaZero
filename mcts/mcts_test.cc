@@ -313,8 +313,8 @@ protected:
 
   void SetUp() override {
     alphazero_net = new WrapNet(
-      "model_provider/alphazero_net.py",
-      "model_provider/test_model/fake_weight.pth",
+      "/desktop/mcts/game/model_provider/alphazero_net.py",
+      "/desktop/mcts/game/model_provider/test_model/fake_weight.pth",
       9
     );
     write_pipe = new PipeMock();
@@ -394,10 +394,10 @@ TEST_F(AlphaZeroNetTest, parseResultTest) {
   EXPECT_FLOAT_EQ(parsed_result.second, 0.5);
 }
 
-// TEST_F(AlphaZeroNetTest, execNetTest) {
-//   alphazero_net->exec_net();
-//   alphazero_net->send_exit();
-// }
+TEST_F(AlphaZeroNetTest, execNetTest) {
+  alphazero_net->exec_net();
+  alphazero_net->send_exit();
+}
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleMock(&argc, argv);
