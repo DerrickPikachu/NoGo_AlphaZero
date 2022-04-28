@@ -84,13 +84,13 @@ def main():
                         help='The board size of the game')
     args = parser.parse_args()
     mediator = Mediator(args.path, args.board_size)
-    print(args.path)
-    print(args.board_size)
-    # while (True):
-    #     cmd = input()
-    #     is_exit = mediator.process_cmd(cmd)
-    #     if is_exit == 0:
-    #         break
+    # print(args.path)
+    # print(args.board_size)
+    while (True):
+        cmd = input()
+        is_exit = mediator.process_cmd(cmd)
+        if is_exit == 0:
+            break
 
 
 if __name__ == "__main__":

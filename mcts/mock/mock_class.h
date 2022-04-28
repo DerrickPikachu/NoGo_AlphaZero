@@ -45,8 +45,8 @@ public:
 
 class PipeMock : public PipeInterface {
 public:
-  MOCK_METHOD1(write, bool(std::string data));
-  MOCK_METHOD0(read, std::string());
+  MOCK_METHOD1(write_to_pipe, bool(std::string data));
+  MOCK_METHOD0(read_from_pipe, std::string());
   MOCK_METHOD0(close_write, void());
   MOCK_METHOD0(close_read, void());
   MOCK_METHOD0(redirect_stdout, void());

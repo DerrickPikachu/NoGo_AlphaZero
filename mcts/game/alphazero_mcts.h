@@ -3,8 +3,40 @@
 #include <iostream>
 #include <string>
 #include <unistd.h>
+#include <fcntl.h>
+#include <exception>
 
 #include "board.h"
+
+
+class WritePipeException : public std::exception {
+public:
+    WritePipeException(std::string msg) :
+        std::exception(),
+        err_msg(msg) {}
+
+    const char* what() const noexcept override {
+        return err_msg.c_str();
+    }
+
+private:
+    std::string err_msg;
+};
+
+
+class ReadPipeException : public std::exception {
+public:
+    ReadPipeException(std::string msg) :
+        std::exception(),
+        err_msg(msg) {}
+
+    const char* what() const noexcept override {
+        return err_msg.c_str();
+    }
+
+private:
+    std::string err_msg;
+};
 
 
 const std::vector<std::string> split(const std::string &str, const char &delimiter) {
@@ -22,8 +54,8 @@ const std::vector<std::string> split(const std::string &str, const char &delimit
 class PipeInterface {
 public:
     virtual ~PipeInterface() {}
-    virtual bool write(std::string data) = 0;
-    virtual std::string read() = 0;
+    virtual bool write_to_pipe(std::string data) = 0;
+    virtual std::string read_from_pipe() = 0;
     virtual void close_write() = 0;
     virtual void close_read() = 0;
     virtual void redirect_stdout() = 0;
@@ -33,12 +65,62 @@ public:
 
 class Pipe : public PipeInterface {
 public:
-    bool write(std::string data) override {}
-    std::string read() override {}
-    void close_write() override {}
-    void close_read() override {}
-    void redirect_stdout() override {}
-    void redirect_stdin() override {}
+    Pipe() {
+        int p[2];
+        if (pipe(p) == -1)
+            std::cerr << "pipe create error" << std::endl;
+        pipe_read = p[0];
+        pipe_write = p[1];
+        write_active = true;
+        read_active = true;
+    }
+
+    bool write_to_pipe(std::string data) override {
+        if (!write_active) {
+            throw WritePipeException("Write after close write");
+        }
+        write(pipe_write, data.c_str(), data.size());
+    }
+
+    std::string read_from_pipe() override {
+        if (!read_active) {
+            throw ReadPipeException("Read after close read");
+        }
+        std::string forward_result;
+        char buffer[820];
+        int read_byte;
+        if ((read_byte = read(pipe_read, buffer, 819)) < 0) {
+            std::cerr << "read error" << std::endl;
+            exit(1);
+        }
+        buffer[read_byte] = '\0';
+        forward_result = std::string(buffer);
+        return forward_result;
+    }
+
+    void close_write() override {
+        close(pipe_write);
+        write_active = false;
+    }
+
+    void close_read() override {
+        close(pipe_read);
+        read_active = false;
+    }
+
+    void redirect_stdout() override {
+        dup2(pipe_write, STDOUT_FILENO);
+    }
+
+    void redirect_stdin() override {
+        dup2(pipe_read, STDIN_FILENO);
+    }
+
+protected:
+    int pipe_write;
+    int pipe_read;
+    bool write_active;
+    bool read_active;
 };
 
 
@@ -89,18 +171,18 @@ public:
     }
 
     std::string get_forward_result(const board& state) override {
-        write_pipe->write("forward\n");
+        write_pipe->write_to_pipe("forward\n");
         std::string encoded_state = board_to_string(state);
-        write_pipe->write(encoded_state + "\n");
-        return read_pipe->read();
+        write_pipe->write_to_pipe(encoded_state + "\n");
+        return read_pipe->read_from_pipe();
     }
 
     void refresh_model() override {
-        write_pipe->write("refresh\n");
+        write_pipe->write_to_pipe("refresh\n");
     }
 
     void send_exit() override {
-        write_pipe->write("exit\n");
+        write_pipe->write_to_pipe("exit\n");
         write_pipe->close_write();
         read_pipe->close_read();
         delete write_pipe;

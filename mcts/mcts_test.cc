@@ -3,6 +3,9 @@
 #include <vector>
 #include <string>
 #include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <exception>
 
 #include "mock_class.h"
 #include "../proto/trajectory.pb.h"
@@ -356,20 +359,20 @@ TEST_F(AlphaZeroNetTest, forwardResultTest) {
   }
   fake_return += "0.5";
 
-  EXPECT_CALL(*write_pipe, write("forward\n"));
-  EXPECT_CALL(*write_pipe, write(fake_state + "\n"));
-  EXPECT_CALL(*read_pipe, read())
+  EXPECT_CALL(*write_pipe, write_to_pipe("forward\n"));
+  EXPECT_CALL(*write_pipe, write_to_pipe(fake_state + "\n"));
+  EXPECT_CALL(*read_pipe, read_from_pipe())
     .WillOnce(Return(fake_return));
   std::string result = alphazero_net->get_forward_result(state);
 }
 
 TEST_F(AlphaZeroNetTest, refreshModelTest) {
-  EXPECT_CALL(*write_pipe, write("refresh\n"));
+  EXPECT_CALL(*write_pipe, write_to_pipe("refresh\n"));
   alphazero_net->refresh_model();
 }
 
 TEST_F(AlphaZeroNetTest, sendExitTest) {
-  EXPECT_CALL(*write_pipe, write("exit\n"));
+  EXPECT_CALL(*write_pipe, write_to_pipe("exit\n"));
   EXPECT_CALL(*write_pipe, close_write());
   EXPECT_CALL(*read_pipe, close_read());
   alphazero_net->send_exit();
@@ -395,8 +398,84 @@ TEST_F(AlphaZeroNetTest, parseResultTest) {
 }
 
 TEST_F(AlphaZeroNetTest, execNetTest) {
+  int reserve_stdout = dup(STDOUT_FILENO);
+  int reserve_stdin = dup(STDIN_FILENO);
   alphazero_net->exec_net();
   alphazero_net->send_exit();
+  dup2(reserve_stdout, STDOUT_FILENO);
+  dup2(reserve_stdin, STDIN_FILENO);
+}
+
+class PipeTest : public ::testing::Test {
+public:
+  PipeTest() {
+    stdout_preserve = dup(STDOUT_FILENO);
+    stdin_preserve = dup(STDIN_FILENO);
+  }
+
+protected:
+  void SetUp() override {
+    pipe = new Pipe();
+  }
+
+  void TearDown() override {
+    delete pipe;
+    dup2(stdout_preserve, STDOUT_FILENO);
+    dup2(stdin_preserve, STDIN_FILENO);
+  }
+
+  PipeInterface* pipe;
+  int stdout_preserve;
+  int stdin_preserve;
+};
+
+TEST_F(PipeTest, readWriteTest) {
+  std::string test_message = "read write test\n";
+  pipe->write_to_pipe(test_message);
+  std::string result = pipe->read_from_pipe();
+  EXPECT_EQ(result, test_message);
+}
+
+TEST_F(PipeTest, closeWriteTest) {
+  pipe->close_write();
+  EXPECT_THROW({
+    try {
+      pipe->write_to_pipe("test");
+    } catch (const std::exception& e) {
+      EXPECT_STREQ("Write after close write", e.what());
+      throw;
+    }
+  }, std::exception);
+}
+
+TEST_F(PipeTest, closeReadTest) {
+  pipe->close_read();
+  EXPECT_THROW({
+    try {
+      std::string result = pipe->read_from_pipe();
+    } catch (const std::exception &e) {
+      EXPECT_STREQ("Read after close read", e.what());
+      throw;
+    }
+  }, std::exception);
+}
+
+TEST_F(PipeTest, redirectStdoutTest) {
+  std::string test_message = "test redirect stdout\n";
+  pipe->redirect_stdout();
+  std::cout << test_message;
+  std::string result = pipe->read_from_pipe();
+  EXPECT_EQ(result, test_message);
+}
+
+TEST_F(PipeTest, redirectStdinTest) {
+  std::string test_message = "test redirect stdin\n";
+  pipe->redirect_stdin();
+  pipe->write_to_pipe(test_message);
+  std::string result;
+  std::getline(std::cin, result);
+  test_message.pop_back();
+  EXPECT_EQ(result, test_message);
 }
 
 int main(int argc, char** argv) {
