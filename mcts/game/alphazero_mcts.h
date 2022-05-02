@@ -5,8 +5,10 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <exception>
+#include <tuple>
 
 #include "board.h"
+#include "action.h"
 
 
 class WritePipeException : public std::exception {
@@ -251,4 +253,42 @@ private:
 protected:
     PipeInterface* write_pipe;
     PipeInterface* read_pipe;
+};
+
+
+class NodeInterface {
+public:
+    ~NodeInterface() {}
+    virtual NodeInterface* select() = 0;
+    virtual float expand(NetInterface*) = 0;
+    virtual void update(float value) = 0;
+    virtual float value() = 0;
+    virtual void reset() = 0;
+    virtual action best_action() = 0;
+    virtual board get_state() = 0;
+};
+
+class Node : public NodeInterface {
+public:
+    Node(const board& b) :
+        value_sum(0.0),
+        visit_count(0),
+        state(b) {}
+
+    ~Node() = default;
+    NodeInterface* select() override {}
+    float expand(NetInterface* net) override {}
+    void update(float value) override {}
+    float value() override {}
+    void reset() override {}
+    action best_action() override {}
+    board get_state() override { return state; }
+
+protected:
+    std::vector<std::tuple<float, board::point, Node>> childs;
+
+private:
+    float value_sum;
+    int visit_count;
+    board state;
 };

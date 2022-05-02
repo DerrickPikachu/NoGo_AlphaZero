@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <exception>
+#include <tuple>
 
 #include "mock_class.h"
 #include "../proto/trajectory.pb.h"
@@ -476,6 +477,106 @@ TEST_F(PipeTest, redirectStdinTest) {
   std::getline(std::cin, result);
   test_message.pop_back();
   EXPECT_EQ(result, test_message);
+}
+
+class NodeTest : public ::testing::Test {
+public:
+  class WrapNode : public Node {
+  public:
+    WrapNode(const board& b) : Node(b) {}
+    std::vector<std::tuple<float, board::point, Node>>* get_childs() {
+      return &childs;
+    }
+  };
+
+protected:
+  void SetUp() {
+    board fake_board;
+    test_node = new WrapNode(fake_board);
+    node_childs = test_node->get_childs();
+  }
+
+  void TearDown() {
+    delete test_node;
+  }
+
+public:
+  WrapNode* test_node;
+  std::vector<std::tuple<float, board::point, Node>>* node_childs;
+};
+
+TEST_F(NodeTest, selectTestWithInputAllZero) {
+  board ans_board = test_node->get_state();
+  ans_board.place(board::point(0));
+  for (int i = 0; i < 5; i++) {
+    board tem = test_node->get_state();
+    board::point action = board::point(i);
+    tem.place(action);
+    node_childs->push_back({
+      1.0 / 81,
+      action,
+      Node(tem)
+    });
+  }
+  NodeInterface* selected_node = test_node->select();
+  EXPECT_TRUE(ans_board == selected_node->get_state());
+}
+
+TEST_F(NodeTest, selectTestWithInputDiff) {
+  board ans_board = test_node->get_state();
+  ans_board.place(board::point(2));
+  std::vector<float> action_prob = { 0.2, 0.1, 0.4, 0.3 };
+  for (int i = 0; i < 4; i++) {
+    board tem = test_node->get_state();
+    board::point action(i);
+    tem.place(action);
+    node_childs->push_back({
+      action_prob[i],
+      action,
+      Node(tem)
+    });
+  }
+  test_node->update(0.0);  // make visit count = 1
+  NodeInterface* selected_node = test_node->select();
+  EXPECT_TRUE(ans_board == selected_node->get_state());
+}
+
+TEST_F(NodeTest, expandTest) {
+  std::vector<float> fake_policy;
+  int total_sum = (1 + 81) * 81 / 2;
+  for (int i = 0; i < 81; i++) {
+    fake_policy.push_back((i + 1) / (float)total_sum);
+  }
+  float fake_value = 0.6;
+  NetMock net_mock;
+  EXPECT_CALL(net_mock, get_forward_result(test_node->get_state()))
+    .WillOnce(Return(std::pair<std::vector<float>, float>({
+      fake_policy, fake_value})));
+  float winrate = test_node->expand(&net_mock);
+
+  EXPECT_FLOAT_EQ(winrate, fake_value);
+  for (auto& child : *node_childs) {
+    float prob = std::get<0>(child);
+    board::point action = std::get<1>(child);
+    Node node = std::get<2>(child);
+    board tem = test_node->get_state();
+    tem.place(action);
+    EXPECT_FLOAT_EQ(fake_policy[action.i], prob);
+    EXPECT_TRUE(tem == node.get_state());
+  }
+  EXPECT_EQ(node_childs->size(), 81 - 9);
+}
+
+TEST_F(NodeTest, updateTestOnlyCallOnce) {
+  test_node->update(0.8);
+  EXPECT_EQ(0.8, test_node->value());
+}
+
+TEST_F(NodeTest, updateTestCallMultipleTimes) {
+  test_node->update(0.9);
+  test_node->update(0.4);
+  test_node->update(0.6);
+  EXPECT_EQ((0.9 + 0.4 + 0.6) / 3, test_node->value());
 }
 
 int main(int argc, char** argv) {

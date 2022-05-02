@@ -52,3 +52,12 @@ public:
   MOCK_METHOD0(redirect_stdout, void());
   MOCK_METHOD0(redirect_stdin, void());
 };
+
+class NetMock : public NetInterface {
+public:
+  MOCK_METHOD0(exec_net, void());
+  MOCK_METHOD1(get_forward_result, std::string(const board&));
+  MOCK_METHOD0(refresh_model, void());
+  MOCK_METHOD0(send_exit, void());
+  MOCK_METHOD1(parse_result, std::pair<std::vector<float>, float>(std::string));
+};
