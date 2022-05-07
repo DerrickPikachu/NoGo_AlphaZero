@@ -483,7 +483,8 @@ class NodeTest : public ::testing::Test {
 public:
   class WrapNode : public Node {
   public:
-    WrapNode(const board& b) : Node(b) {}
+    WrapNode(const board& b, board::piece_type color) : 
+      Node(b, color) {}
     std::vector<std::tuple<float, board::point, Node>>* get_childs() {
       return &childs;
     }
@@ -492,7 +493,7 @@ public:
 protected:
   void SetUp() {
     board fake_board;
-    test_node = new WrapNode(fake_board);
+    test_node = new WrapNode(fake_board, board::piece_type::black);
     node_childs = test_node->get_childs();
   }
 
@@ -506,6 +507,7 @@ public:
 };
 
 TEST_F(NodeTest, selectTestWithInputAllZero) {
+  test_node->update(0);
   board ans_board = test_node->get_state();
   ans_board.place(board::point(0));
   for (int i = 0; i < 5; i++) {
@@ -515,10 +517,13 @@ TEST_F(NodeTest, selectTestWithInputAllZero) {
     node_childs->push_back({
       1.0 / 81,
       action,
-      Node(tem)
+      Node(tem, board::piece_type::white)
     });
   }
   NodeInterface* selected_node = test_node->select();
+  std::cout << "check" << std::endl;
+  if (selected_node != NULL)
+    std::cout << selected_node->get_state() << std::endl;
   EXPECT_TRUE(ans_board == selected_node->get_state());
 }
 
@@ -533,7 +538,7 @@ TEST_F(NodeTest, selectTestWithInputDiff) {
     node_childs->push_back({
       action_prob[i],
       action,
-      Node(tem)
+      Node(tem, board::piece_type::white)
     });
   }
   test_node->update(0.0);  // make visit count = 1
@@ -548,10 +553,15 @@ TEST_F(NodeTest, expandTest) {
     fake_policy.push_back((i + 1) / (float)total_sum);
   }
   float fake_value = 0.6;
+  std::pair<std::vector<float>, float> fake_return(
+    fake_policy, fake_value
+  );
   NetMock net_mock;
+  std::string fake_result = "test";
   EXPECT_CALL(net_mock, get_forward_result(test_node->get_state()))
-    .WillOnce(Return(std::pair<std::vector<float>, float>({
-      fake_policy, fake_value})));
+    .WillOnce(Return(fake_result));
+  EXPECT_CALL(net_mock, parse_result(fake_result))
+    .WillOnce(Return(fake_return));
   float winrate = test_node->expand(&net_mock);
 
   EXPECT_FLOAT_EQ(winrate, fake_value);
@@ -578,6 +588,8 @@ TEST_F(NodeTest, updateTestCallMultipleTimes) {
   test_node->update(0.6);
   EXPECT_EQ((0.9 + 0.4 + 0.6) / 3, test_node->value());
 }
+
+// TODO: need to add the test when root is white player.
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleMock(&argc, argv);

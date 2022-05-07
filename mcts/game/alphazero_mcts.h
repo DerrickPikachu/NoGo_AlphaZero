@@ -270,19 +270,84 @@ public:
 
 class Node : public NodeInterface {
 public:
-    Node(const board& b) :
+    Node(const board& b, board::piece_type piece) :
         value_sum(0.0),
         visit_count(0),
-        state(b) {}
+        state(b),
+        piece_color(piece) {}
 
     ~Node() = default;
-    NodeInterface* select() override {}
-    float expand(NetInterface* net) override {}
-    void update(float value) override {}
-    float value() override {}
-    void reset() override {}
+    NodeInterface* select() override {
+        float max_score = 0.0;
+        Node* best_node;
+        for (int i = 0; i < childs.size(); i++) {
+            Node& child = std::get<2>(childs[i]);
+            float score = puct(childs[i]);
+            if (max_score < score) {
+                std::cout << "find better node" << std::endl;
+                max_score = score;
+                best_node = &child;
+            }
+        }
+        return best_node;
+    }
+
+    float expand(NetInterface* net) override {
+        // TODO: think about the end state
+        board::piece_type child_color = 
+            (piece_color == board::piece_type::black)? 
+            board::piece_type::white : board::piece_type::black;
+        std::string result = net->get_forward_result(state);
+        std::pair<std::vector<float>, float> policy_value = 
+            net->parse_result(result);
+        int board_size = board::size_x * board::size_y;
+        for (int i = 0; i < board_size; i++) {
+            board copy = state;
+            board::point move = board::point(i);
+            if (copy.place(move) == board::legal) {
+                childs.push_back({
+                    policy_value.first[i],
+                    move,
+                    Node(copy, child_color)
+                });
+            }
+        }
+        return policy_value.second;
+    }
+
+    void update(float value) override {
+        value_sum += value;
+        visit_count++;
+    }
+    
+    void reset() override {
+        value_sum = 0.0;
+        visit_count = 0;
+        childs.clear();
+        state = board();
+    }
+
+    float value() override {
+        if (visit_count == 0)
+            return 0.0;
+        return value_sum / visit_count;
+    }
     action best_action() override {}
     board get_state() override { return state; }
+    int get_visit_count() { return visit_count; }
+
+private:
+    float puct(std::tuple<float, board::point, Node>& child) {
+        float prob = std::get<0>(child);
+        Node& child_node = std::get<2>(child);
+        float prior = 
+            prob * (float)std::sqrt(visit_count) 
+            / (child_node.get_visit_count() + 1);
+        float value = (piece_color == board::piece_type::black)?
+            child_node.value() : -child_node.value();
+        std::cout << "value: " << value << "\tprior: " << prior << std::endl;
+        return value + prior;
+    }
 
 protected:
     std::vector<std::tuple<float, board::point, Node>> childs;
@@ -291,4 +356,5 @@ private:
     float value_sum;
     int visit_count;
     board state;
+    board::piece_type piece_color;
 };
