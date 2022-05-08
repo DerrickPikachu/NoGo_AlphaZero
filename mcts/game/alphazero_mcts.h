@@ -284,7 +284,6 @@ public:
             Node& child = std::get<2>(childs[i]);
             float score = puct(childs[i]);
             if (max_score < score) {
-                std::cout << "find better node" << std::endl;
                 max_score = score;
                 best_node = &child;
             }

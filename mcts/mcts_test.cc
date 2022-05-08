@@ -521,7 +521,6 @@ TEST_F(NodeTest, selectTestWithInputAllZero) {
     });
   }
   NodeInterface* selected_node = test_node->select();
-  std::cout << "check" << std::endl;
   if (selected_node != NULL)
     std::cout << selected_node->get_state() << std::endl;
   EXPECT_TRUE(ans_board == selected_node->get_state());
@@ -562,13 +561,15 @@ TEST_F(NodeTest, expandTest) {
     .WillOnce(Return(fake_result));
   EXPECT_CALL(net_mock, parse_result(fake_result))
     .WillOnce(Return(fake_return));
+  
+  // Test target
   float winrate = test_node->expand(&net_mock);
 
   EXPECT_FLOAT_EQ(winrate, fake_value);
   for (auto& child : *node_childs) {
     float prob = std::get<0>(child);
     board::point action = std::get<1>(child);
-    Node node = std::get<2>(child);
+    Node& node = std::get<2>(child);
     board tem = test_node->get_state();
     tem.place(action);
     EXPECT_FLOAT_EQ(fake_policy[action.i], prob);
@@ -579,14 +580,14 @@ TEST_F(NodeTest, expandTest) {
 
 TEST_F(NodeTest, updateTestOnlyCallOnce) {
   test_node->update(0.8);
-  EXPECT_EQ(0.8, test_node->value());
+  EXPECT_FLOAT_EQ(0.8, test_node->value());
 }
 
 TEST_F(NodeTest, updateTestCallMultipleTimes) {
   test_node->update(0.9);
   test_node->update(0.4);
   test_node->update(0.6);
-  EXPECT_EQ((0.9 + 0.4 + 0.6) / 3, test_node->value());
+  EXPECT_FLOAT_EQ((0.9 + 0.4 + 0.6) / 3, test_node->value());
 }
 
 // TODO: need to add the test when root is white player.
