@@ -590,6 +590,36 @@ TEST_F(NodeTest, updateTestCallMultipleTimes) {
   EXPECT_FLOAT_EQ((0.9 + 0.4 + 0.6) / 3, test_node->value());
 }
 
+TEST_F(NodeTest, bestActionTest) {
+  std::vector<int> simulation_count = {
+    19, 15, 55, 77, 3
+  };
+  for (int i = 0; i < 5; i++) {
+    board tem = test_node->get_state();
+    board::point action(i);
+    tem.place(action);
+    Node child(tem, board::piece_type::white);
+    for (int j = 0; j < simulation_count[i]; j++) {
+      child.update(0.0);  // accumulate visit count
+    }
+    node_childs->push_back({
+      0.0,
+      action,
+      child
+    });
+  }
+
+  // Test target
+  board::point ans = test_node->best_action();
+
+  EXPECT_EQ(3, ans.i);
+}
+
+TEST_F(NodeTest, bestActionWhenNoChilds) {
+  board::point ans = test_node->best_action();
+  EXPECT_EQ(-1, ans.i);
+}
+
 // TODO: need to add the test when root is white player.
 
 int main(int argc, char** argv) {

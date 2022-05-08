@@ -264,7 +264,7 @@ public:
     virtual void update(float value) = 0;
     virtual float value() = 0;
     virtual void reset() = 0;
-    virtual action best_action() = 0;
+    virtual board::point best_action() = 0;
     virtual board get_state() = 0;
 };
 
@@ -274,7 +274,8 @@ public:
         value_sum(0.0),
         visit_count(0),
         state(b),
-        piece_color(piece) {}
+        piece_color(piece),
+        is_expand(false) {}
 
     ~Node() = default;
     NodeInterface* select() override {
@@ -311,6 +312,7 @@ public:
                 });
             }
         }
+        is_expand = true;
         return policy_value.second;
     }
 
@@ -331,7 +333,20 @@ public:
             return 0.0;
         return value_sum / visit_count;
     }
-    action best_action() override {}
+
+    board::point best_action() override {
+        int max_visit_count = 0;
+        board::point best_point;
+        for (int i = 0; i < childs.size(); i++) {
+            Node& child_node = std::get<2>(childs[i]);
+            if (child_node.get_visit_count() > max_visit_count) {
+                max_visit_count = child_node.get_visit_count();
+                best_point = std::get<1>(childs[i]);
+            }
+        }
+        return best_point;
+    }
+
     board get_state() override { return state; }
     int get_visit_count() { return visit_count; }
 
@@ -344,7 +359,7 @@ private:
             / (child_node.get_visit_count() + 1);
         float value = (piece_color == board::piece_type::black)?
             child_node.value() : -child_node.value();
-        std::cout << "value: " << value << "\tprior: " << prior << std::endl;
+        // std::cout << "value: " << value << "\tprior: " << prior << std::endl;
         return value + prior;
     }
 
@@ -356,4 +371,5 @@ private:
     int visit_count;
     board state;
     board::piece_type piece_color;
+    bool is_expand;
 };
