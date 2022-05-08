@@ -576,6 +576,34 @@ TEST_F(NodeTest, expandTest) {
     EXPECT_TRUE(tem == node.get_state());
   }
   EXPECT_EQ(node_childs->size(), 81 - 9);
+
+  // expand again test
+  EXPECT_THROW({
+    try {
+      test_node->expand(NULL);
+    } catch (const std::exception& e) {
+      EXPECT_STREQ("The node has been expanded, but try to expand again", e.what());
+      throw;
+    }
+  }, AlphaZeroException);
+}
+
+TEST_F(NodeTest, expandWithEndStateTest) {
+  int action_space = board::size_x * board::size_y - 1;
+  int i = 0;
+  board test_board;
+  while (true) {
+    if (test_board(i) != 3u) {
+      test_board.place(board::point(i));
+      if (test_board.place(board::point(action_space - i)) != board::legal) break;
+    }
+    i++;
+  }
+  std::cout << test_board << std::endl;
+  Node end_state_node(test_board, board::piece_type::white);
+  NetMock net_mock;
+  float value = end_state_node.expand(&net_mock);
+  EXPECT_FLOAT_EQ(1.0, value);
 }
 
 TEST_F(NodeTest, updateTestOnlyCallOnce) {

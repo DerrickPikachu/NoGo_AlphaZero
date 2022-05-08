@@ -11,12 +11,12 @@
 #include "action.h"
 
 
-class WritePipeException : public std::exception {
+class AlphaZeroException : public std::exception {
 public:
-    WritePipeException(std::string msg) :
+    AlphaZeroException(std::string msg) :
         std::exception(),
         err_msg(msg) {}
-
+    
     const char* what() const noexcept override {
         return err_msg.c_str();
     }
@@ -25,19 +25,22 @@ private:
     std::string err_msg;
 };
 
+class WritePipeException : public AlphaZeroException {
+public:
+    WritePipeException(std::string msg) :
+        AlphaZeroException(msg) {}
+};
 
-class ReadPipeException : public std::exception {
+class ReadPipeException : public AlphaZeroException {
 public:
     ReadPipeException(std::string msg) :
-        std::exception(),
-        err_msg(msg) {}
+        AlphaZeroException(msg) {}
+};
 
-    const char* what() const noexcept override {
-        return err_msg.c_str();
-    }
-
-private:
-    std::string err_msg;
+class ExpandException : public AlphaZeroException {
+public:
+    ExpandException(std::string msg) :
+        AlphaZeroException(msg) {}
 };
 
 
@@ -293,24 +296,31 @@ public:
     }
 
     float expand(NetInterface* net) override {
-        // TODO: think about the end state
+        if (is_expand) {
+            throw ExpandException(
+                "The node has been expanded, but try to expand again");
+        }
+        int action_space = board::size_x * board::size_y;
         board::piece_type child_color = 
             (piece_color == board::piece_type::black)? 
             board::piece_type::white : board::piece_type::black;
+        std::vector<board::point> valid_actions = get_valid_actions();
+        if (valid_actions.empty()) {  // end state
+            return (child_color == board::piece_type::black)?
+                1.0 : -1.0;
+        }
         std::string result = net->get_forward_result(state);
         std::pair<std::vector<float>, float> policy_value = 
             net->parse_result(result);
-        int board_size = board::size_x * board::size_y;
-        for (int i = 0; i < board_size; i++) {
-            board copy = state;
-            board::point move = board::point(i);
-            if (copy.place(move) == board::legal) {
-                childs.push_back({
-                    policy_value.first[i],
-                    move,
-                    Node(copy, child_color)
-                });
-            }
+        for (int i = 0; i < valid_actions.size(); i++) {
+            int action_id = valid_actions[i].i;
+            board tem = state;
+            tem.place(valid_actions[i]);
+            childs.push_back({
+                policy_value.first[action_id],
+                valid_actions[i],
+                Node(tem, child_color)
+            });
         }
         is_expand = true;
         return policy_value.second;
@@ -361,6 +371,20 @@ private:
             child_node.value() : -child_node.value();
         // std::cout << "value: " << value << "\tprior: " << prior << std::endl;
         return value + prior;
+    }
+
+    std::vector<board::point> get_valid_actions() {
+        int action_space = board::size_x * board::size_y;
+        std::vector<board::point> valid_actions;
+        valid_actions.reserve(action_space);
+        for (int i = 0; i < action_space; i++) {
+            board tem = state;
+            board::point action(i);
+            if (tem.place(action) == board::legal) {
+                valid_actions.push_back(action);
+            }
+        }
+        return valid_actions;
     }
 
 protected:
