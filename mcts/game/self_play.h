@@ -79,6 +79,7 @@ private:
         trajectory::transition* first_transition = 
             trajectory_buffer.add_transitions();
         auto* state_proto = first_transition->mutable_state();
+        // TODO: Be careful of this part
         for (int x = 0; x < board::size_x; x++) {
             for (int y = 0; y < board::size_y; y++) {
                 float value;

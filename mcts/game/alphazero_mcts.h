@@ -281,6 +281,7 @@ public:
         is_expand(false) {}
 
     ~Node() = default;
+
     NodeInterface* select() override {
         float max_score = 0.0;
         Node* best_node;
