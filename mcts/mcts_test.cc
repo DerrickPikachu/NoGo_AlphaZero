@@ -490,13 +490,13 @@ public:
   };
 
 protected:
-  void SetUp() {
+  void SetUp() override {
     board fake_board;
     test_node = new WrapNode(fake_board, board::piece_type::black);
     node_childs = test_node->get_childs();
   }
 
-  void TearDown() {
+  void TearDown() override {
     delete test_node;
   }
 
@@ -573,6 +573,7 @@ TEST_F(NodeTest, ExpandTest) {
     tem.place(action);
     EXPECT_FLOAT_EQ(fake_policy[action.i], prob);
     EXPECT_TRUE(tem == node.get_state());
+    EXPECT_EQ(board::piece_type::white, node.get_color());
   }
   EXPECT_EQ(node_childs->size(), 81 - 9);
 
@@ -581,7 +582,9 @@ TEST_F(NodeTest, ExpandTest) {
     try {
       test_node->expand(NULL);
     } catch (const std::exception& e) {
-      EXPECT_STREQ("The node has been expanded, but try to expand again", e.what());
+      EXPECT_STREQ(
+        "Expand error: The node has been expanded, but try to expand again",
+        e.what());
       throw;
     }
   }, AlphaZeroException);
@@ -648,6 +651,84 @@ TEST_F(NodeTest, BestActionWhenNoChilds) {
 }
 
 // TODO: need to add the test when root is white player.
+class WhiteNodeTest : public ::testing::Test {
+protected:
+  void SetUp() override {
+    board fake_board;
+    fake_board.place(board::point(0));
+    test_node = new NodeTest::WrapNode(fake_board, board::piece_type::white);
+    node_childs = test_node->get_childs();
+  }
+  
+  void TearDown() override {
+    delete test_node;
+  }
+
+public:
+  NodeTest::WrapNode* test_node;
+  std::vector<std::tuple<float, board::point, Node>>* node_childs;
+};
+
+TEST_F(WhiteNodeTest, SelectTestWithNegitiveWinrate) {
+  board ans_board = test_node->get_state();
+  ans_board.place(board::point(1));
+  test_node->update(0.0);
+  test_node->update(0.0);  // make visit count = 2
+  std::vector<float> fake_value = { -0.6, -0.3, 0.1, 0.6, -0.4 };
+  for (int i = 0; i < fake_value.size(); i++) {
+    board tem = test_node->get_state();
+    board::point action(i + 1);
+    tem.place(action);
+    Node child(tem, board::piece_type::black);
+    child.update(fake_value[i]);
+    node_childs->push_back({
+      0.0,
+      action,
+      child
+    });
+  }
+
+  NodeInterface* selected_node = test_node->select();
+  EXPECT_TRUE(ans_board == selected_node->get_state());
+}
+
+TEST_F(WhiteNodeTest, SelectTestWithNoChild) {
+  EXPECT_THROW({
+    try {
+      test_node->select();
+    } catch (const std::exception& e) {
+      EXPECT_STREQ("Select error: the node has no child", e.what());
+      throw;
+    }
+  }, AlphaZeroException);
+}
+
+TEST_F(WhiteNodeTest, ExpandTestWithWhiteRoot) {
+  std::vector<float> fake_policy;
+  int total_sum = (1 + 81) * 81 / 2;
+  for (int i = 0; i < 81; i++) {
+    fake_policy.push_back((i + 1) / (float)total_sum);
+  }
+  float fake_value = 0.6;
+  std::pair<std::vector<float>, float> fake_return(
+    fake_policy, fake_value
+  );
+  NetMock net_mock;
+  std::string fake_result = "test";
+  EXPECT_CALL(net_mock, get_forward_result(test_node->get_state()))
+    .WillOnce(Return(fake_result));
+  EXPECT_CALL(net_mock, parse_result(fake_result))
+    .WillOnce(Return(fake_return));
+  
+  float winrate = test_node->expand(&net_mock);
+
+  for (auto& child : *node_childs) {
+    Node& node = std::get<2>(child);
+    EXPECT_EQ(board::piece_type::black, node.get_color());
+  }
+  EXPECT_EQ(node_childs->size(), 81 - 10);
+}
+
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleMock(&argc, argv);

@@ -269,6 +269,7 @@ public:
     virtual void reset() = 0;
     virtual board::point best_action() = 0;
     virtual board get_state() = 0;
+    virtual board::piece_type get_color() = 0;
 };
 
 class Node : public NodeInterface {
@@ -283,6 +284,8 @@ public:
     ~Node() = default;
 
     NodeInterface* select() override {
+        if (childs.empty())
+            throw AlphaZeroException("Select error: the node has no child");
         float max_score = 0.0;
         Node* best_node;
         for (int i = 0; i < childs.size(); i++) {
@@ -299,7 +302,7 @@ public:
     float expand(NetInterface* net) override {
         if (is_expand) {
             throw ExpandException(
-                "The node has been expanded, but try to expand again");
+                "Expand error: The node has been expanded, but try to expand again");
         }
         int action_space = board::size_x * board::size_y;
         board::piece_type child_color = 
@@ -359,6 +362,7 @@ public:
     }
 
     board get_state() override { return state; }
+    board::piece_type get_color() override { return piece_color; }
     int get_visit_count() { return visit_count; }
 
 private:
