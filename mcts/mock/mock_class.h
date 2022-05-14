@@ -61,3 +61,16 @@ public:
   MOCK_METHOD0(send_exit, void());
   MOCK_METHOD1(parse_result, std::pair<std::vector<float>, float>(std::string));
 };
+
+class NodeMock :public NodeInterface {
+public:
+  MOCK_METHOD0(select, NodeInterface*());
+  MOCK_METHOD1(expand, float(NetInterface*));
+  MOCK_METHOD1(update, void(float));
+  MOCK_METHOD0(value, float());
+  MOCK_METHOD0(reset, void());
+  MOCK_METHOD0(best_action, board::point());
+  MOCK_METHOD0(get_state, board());
+  MOCK_METHOD0(get_color, board::piece_type());
+  MOCK_METHOD0(expanded, bool());
+};

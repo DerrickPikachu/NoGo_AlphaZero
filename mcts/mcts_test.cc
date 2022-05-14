@@ -484,9 +484,12 @@ public:
   public:
     WrapNode(const board& b, board::piece_type color) : 
       Node(b, color) {}
+    
     std::vector<std::tuple<float, board::point, Node>>* get_childs() {
       return &childs;
     }
+
+    void set_is_expand(bool value) { is_expand = value; }
   };
 
 protected:
@@ -519,6 +522,7 @@ TEST_F(NodeTest, SelectTestWithInputAllZero) {
       Node(tem, board::piece_type::white)
     });
   }
+  test_node->set_is_expand(true);
   NodeInterface* selected_node = test_node->select();
   if (selected_node != NULL)
     std::cout << selected_node->get_state() << std::endl;
@@ -540,6 +544,7 @@ TEST_F(NodeTest, SelectTestWithInputDiff) {
     });
   }
   test_node->update(0.0);  // make visit count = 1
+  test_node->set_is_expand(true);
   NodeInterface* selected_node = test_node->select();
   EXPECT_TRUE(ans_board == selected_node->get_state());
 }
@@ -687,6 +692,7 @@ TEST_F(WhiteNodeTest, SelectTestWithNegitiveWinrate) {
       child
     });
   }
+  test_node->set_is_expand(true);
 
   NodeInterface* selected_node = test_node->select();
   EXPECT_TRUE(ans_board == selected_node->get_state());
@@ -697,10 +703,26 @@ TEST_F(WhiteNodeTest, SelectTestWithNoChild) {
     try {
       test_node->select();
     } catch (const std::exception& e) {
-      EXPECT_STREQ("Select error: the node has no child", e.what());
+      EXPECT_STREQ("Select error: node hasn't been expand", e.what());
       throw;
     }
   }, AlphaZeroException);
+}
+
+TEST_F(WhiteNodeTest, SelectTestWithEndState) {
+  int action_space = board::size_x * board::size_y - 1;
+  int i = 0;
+  board test_board;
+  while (true) {
+    if (test_board(i) != 3u) {
+      test_board.place(board::point(i));
+      if (test_board.place(board::point(action_space - i)) != board::legal) break;
+    }
+    i++;
+  }
+  test_node->set_is_expand(true);
+  NodeInterface* select_result = test_node->select();
+  EXPECT_EQ(NULL, select_result);
 }
 
 TEST_F(WhiteNodeTest, ExpandTestWithWhiteRoot) {
@@ -729,6 +751,135 @@ TEST_F(WhiteNodeTest, ExpandTestWithWhiteRoot) {
   EXPECT_EQ(node_childs->size(), 81 - 10);
 }
 
+
+class TreeTest : public ::testing::Test {
+public:
+  class WrapTree : public Tree {
+  public:
+    WrapTree() : Tree() {}
+
+    void set_history(std::vector<NodeInterface*> fake_history) {
+      history = fake_history;
+    }
+
+    std::vector<NodeInterface*> get_history() { return history; }
+    NodeInterface* get_select_node() { return select_node; }
+  };
+
+  class WrapNode : public Node {
+  public:
+    WrapNode(board b, board::piece_type piece) :
+      Node(b, piece) {}
+
+    void set_childs(
+      std::vector<std::tuple<float, board::point, WrapNode>>& fake_child) {
+      childs = fake_child;
+    }
+
+    void set_is_expand(bool value) { is_expand = value; }
+
+  protected:
+    std::vector<std::tuple<float, board::point, WrapNode>> childs;
+  };
+
+protected:
+  void SetUp() override {
+    tree = new Tree();
+  }
+
+  void TearDown() override {
+    delete tree;
+  }
+
+public:
+  TreeInterface* tree;
+  NodeInterface* test_root;
+};
+
+TEST_F(TreeTest, SelectTestWithOnlyRoot) {
+  test_root = new WrapNode(board(), board::piece_type::black);
+  tree->set_root(test_root);
+  EXPECT_THROW({
+    try {
+      tree->select();
+    } catch (const std::exception& c) {
+      EXPECT_STREQ(
+        "Select error: root haven't been expanded",
+        c.what());
+      throw;
+    }
+  }, AlphaZeroException);
+}
+
+TEST_F(TreeTest, SelectTestWithOneLevel) {
+  std::vector<NodeMock> fake_nodes(2);
+  for (int i = 0; i < fake_nodes.size() - 1; i++) {
+    EXPECT_CALL(fake_nodes[i], select())
+      .WillOnce(Return(&fake_nodes[i+1]));
+    EXPECT_CALL(fake_nodes[i], expanded())
+      .WillRepeatedly(Return(true));
+  }
+  EXPECT_CALL(fake_nodes.back(), get_state())
+    .WillOnce(Return(board()));
+  EXPECT_CALL(fake_nodes.back(), expanded())
+    .WillRepeatedly(Return(false));
+  test_root = &fake_nodes[0];
+  tree->set_root(test_root);
+  tree->select();
+
+  NodeInterface* select_node = ((WrapTree*)tree)->get_select_node();
+  EXPECT_TRUE(board() == select_node->get_state());
+}
+
+TEST_F(TreeTest, SelectTestWithMultiLevel) {
+  std::vector<NodeMock> fake_nodes(10);
+  for (int i = 0; i < fake_nodes.size() - 1; i++) {
+    EXPECT_CALL(fake_nodes[i], select())
+      .WillOnce(Return(&fake_nodes[i+1]));
+    EXPECT_CALL(fake_nodes[i], expanded())
+      .WillRepeatedly(Return(true));
+    board tem;
+    tem.place(board::point(i));
+    EXPECT_CALL(fake_nodes[i], get_state())
+      .WillRepeatedly(Return(tem));
+  }
+  EXPECT_CALL(fake_nodes.back(), get_state())
+    .WillRepeatedly(Return(board()));
+  EXPECT_CALL(fake_nodes.back(), expanded())
+    .WillRepeatedly(Return(false));
+  test_root = &fake_nodes[0];
+  tree->set_root(test_root);
+  tree->select();
+
+  NodeInterface* select_node = ((WrapTree*)tree)->get_select_node();
+  EXPECT_TRUE(board() == select_node->get_state());
+  auto result_history = ((WrapTree*)tree)->get_history();
+  for (int i = 0; i < fake_nodes.size(); i++) {
+    EXPECT_EQ(fake_nodes[i].get_state(), result_history[i]->get_state());
+  }
+}
+
+TEST_F(TreeTest, SelectTestEncounterEndState) {
+  std::vector<NodeMock> fake_nodes(10);
+  for (int i = 0; i < fake_nodes.size() - 1; i++) {
+    EXPECT_CALL(fake_nodes[i], select())
+      .WillOnce(Return(&fake_nodes[i+1]));
+    EXPECT_CALL(fake_nodes[i], expanded())
+      .WillRepeatedly(Return(true));
+  }
+  EXPECT_CALL(fake_nodes.back(), select())
+    .WillOnce(Return(nullptr));
+  EXPECT_CALL(fake_nodes.back(), expanded())
+    .WillOnce(Return(true));
+  EXPECT_CALL(fake_nodes.back(), get_state())
+    .WillOnce(Return(board()));
+  test_root = &fake_nodes[0];
+  tree->set_root(test_root);
+  tree->select();
+
+  NodeInterface* select_node = ((WrapTree*)tree)->get_select_node();
+  EXPECT_TRUE(board() == select_node->get_state());
+}
 
 int main(int argc, char** argv) {
   ::testing::InitGoogleMock(&argc, argv);

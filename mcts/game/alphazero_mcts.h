@@ -270,6 +270,7 @@ public:
     virtual board::point best_action() = 0;
     virtual board get_state() = 0;
     virtual board::piece_type get_color() = 0;
+    virtual bool expanded() = 0;
 };
 
 class Node : public NodeInterface {
@@ -284,8 +285,10 @@ public:
     ~Node() = default;
 
     NodeInterface* select() override {
+        if (!is_expand)
+            throw AlphaZeroException("Select error: node hasn't been expand");
         if (childs.empty())
-            throw AlphaZeroException("Select error: the node has no child");
+            return NULL;
         float max_score = 0.0;
         Node* best_node;
         for (int i = 0; i < childs.size(); i++) {
@@ -363,6 +366,7 @@ public:
 
     board get_state() override { return state; }
     board::piece_type get_color() override { return piece_color; }
+    bool expanded() override { return is_expand; }
     int get_visit_count() { return visit_count; }
 
 private:
@@ -394,11 +398,55 @@ private:
 
 protected:
     std::vector<std::tuple<float, board::point, Node>> childs;
+    bool is_expand;
 
 private:
     float value_sum;
     int visit_count;
     board state;
     board::piece_type piece_color;
-    bool is_expand;
+};
+
+class TreeInterface {
+public:
+    ~TreeInterface() {}
+    virtual void search() = 0;
+    virtual void select() = 0;
+    virtual void expand() = 0;
+    virtual void update() = 0;
+    virtual board::point get_action() = 0;
+    virtual void set_root(NodeInterface*) = 0;
+};
+
+class Tree : public TreeInterface {
+public:
+    Tree() {}
+    ~Tree() = default;
+
+    void search() override {}
+    void select() override {
+        if (!root->expanded())
+            throw AlphaZeroException("Select error: root haven't been expanded");
+        NodeInterface* next_node = root;
+        history.push_back(next_node);
+        while (next_node->expanded()) {
+            try {
+                next_node = next_node->select();
+            } catch (std::exception& c) {
+                throw;
+            }
+            if (next_node == nullptr)  break;
+            history.push_back(next_node);
+        }
+        select_node = history.back();
+    }
+    void expand() override {}
+    void update() override {}
+    board::point get_action() override {}
+    void set_root(NodeInterface* node) { root = node; }
+
+protected:
+    NodeInterface* root;
+    NodeInterface* select_node;
+    std::vector<NodeInterface*> history;
 };
