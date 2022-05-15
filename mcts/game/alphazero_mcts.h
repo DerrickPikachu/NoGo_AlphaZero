@@ -410,10 +410,9 @@ private:
 class TreeInterface {
 public:
     ~TreeInterface() {}
-    virtual void search() = 0;
     virtual void select() = 0;
-    virtual void expand() = 0;
-    virtual void update() = 0;
+    virtual float expand() = 0;
+    virtual void update(float) = 0;
     virtual board::point get_action() = 0;
     virtual void set_root(NodeInterface*) = 0;
 };
@@ -426,7 +425,6 @@ public:
         select_node(nullptr) {}
     ~Tree() = default;
 
-    void search() override {}
     void select() override {
         if (!root->expanded())
             throw AlphaZeroException("Select error: root haven't been expanded");
@@ -444,13 +442,20 @@ public:
         select_node = history.back();
     }
 
-    void expand() override {
+    float expand() override {
         if (select_node == nullptr)
             throw AlphaZeroException("Expand error: tree select node is null");
-        std::cerr << "select node is not null" << std::endl;
-        select_node->expand(net);
+        return select_node->expand(net);
     }
-    void update() override {}
+
+    void update(float winrate) override {
+        if (history.empty())
+            throw AlphaZeroException("Update error: the history is empty");
+        for (NodeInterface* node : history) {
+            node->update(winrate);
+        }
+    }
+
     board::point get_action() override {}
     void set_root(NodeInterface* node) { root = node; }
 

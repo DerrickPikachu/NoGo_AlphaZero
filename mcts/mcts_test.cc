@@ -885,9 +885,11 @@ TEST_F(TreeTest, SelectTestEncounterEndState) {
 
 TEST_F(TreeTest, ExpandTest) {
   NodeMock mock_node;
-  EXPECT_CALL(mock_node, expand(&fake_net));
+  EXPECT_CALL(mock_node, expand(&fake_net))
+    .WillOnce(Return(0.7));
   ((WrapTree*)tree)->set_select_node(&mock_node);
-  tree->expand();
+  float value = tree->expand();
+  EXPECT_FLOAT_EQ(0.7, value);
 }
 
 TEST_F(TreeTest, ExpandTestWithNullNode) {
@@ -902,6 +904,45 @@ TEST_F(TreeTest, ExpandTestWithNullNode) {
       throw;
     }
   }, AlphaZeroException);
+}
+
+TEST_F(TreeTest, UpdateTestWithEmptyHistory) {
+  EXPECT_THROW({
+    try {
+      tree->update(0.7);
+    } catch (std::exception& c) {
+      EXPECT_STREQ(
+        "Update error: the history is empty",
+        c.what()
+      );
+      throw;
+    }
+  }, AlphaZeroException);
+}
+
+TEST_F(TreeTest, UpdateOnlyOneNode) {
+  float winrate = 0.3;
+  std::vector<NodeInterface*> fake_history;
+  NodeMock fake_node;
+  EXPECT_CALL(fake_node, update(winrate));
+  fake_history.push_back(&fake_node);
+  ((WrapTree*)tree)->set_history(fake_history);
+  tree->update(winrate);
+}
+
+TEST_F(TreeTest, UpdateMultiNode) {
+  float winrate = 0.3;
+  std::vector<NodeInterface*> fake_history;
+  for (int i = 0; i < 10; i++) {
+    NodeMock* fake_node = new NodeMock();
+    EXPECT_CALL(*fake_node, update(winrate));
+    fake_history.push_back(fake_node);
+  }
+  ((WrapTree*)tree)->set_history(fake_history);
+  tree->update(winrate);
+  for (int i = 0; i < 10; i++) {
+    delete (NodeMock*)fake_history[i];
+  }
 }
 
 int main(int argc, char** argv) {
