@@ -756,7 +756,7 @@ class TreeTest : public ::testing::Test {
 public:
   class WrapTree : public Tree {
   public:
-    WrapTree() : Tree() {}
+    WrapTree(NetInterface* network_provider) : Tree(network_provider) {}
 
     void set_history(std::vector<NodeInterface*> fake_history) {
       history = fake_history;
@@ -764,6 +764,7 @@ public:
 
     std::vector<NodeInterface*> get_history() { return history; }
     NodeInterface* get_select_node() { return select_node; }
+    void set_select_node(NodeInterface* node) { select_node = node; }
   };
 
   class WrapNode : public Node {
@@ -784,7 +785,7 @@ public:
 
 protected:
   void SetUp() override {
-    tree = new Tree();
+    tree = new Tree(&fake_net);
   }
 
   void TearDown() override {
@@ -794,6 +795,7 @@ protected:
 public:
   TreeInterface* tree;
   NodeInterface* test_root;
+  NetMock fake_net;
 };
 
 TEST_F(TreeTest, SelectTestWithOnlyRoot) {
@@ -879,6 +881,27 @@ TEST_F(TreeTest, SelectTestEncounterEndState) {
 
   NodeInterface* select_node = ((WrapTree*)tree)->get_select_node();
   EXPECT_TRUE(board() == select_node->get_state());
+}
+
+TEST_F(TreeTest, ExpandTest) {
+  NodeMock mock_node;
+  EXPECT_CALL(mock_node, expand(&fake_net));
+  ((WrapTree*)tree)->set_select_node(&mock_node);
+  tree->expand();
+}
+
+TEST_F(TreeTest, ExpandTestWithNullNode) {
+  EXPECT_THROW({
+    try {
+      tree->expand();
+    } catch (std::exception& c) {
+      EXPECT_STREQ(
+        "Expand error: tree select node is null",
+        c.what()
+      );
+      throw;
+    }
+  }, AlphaZeroException);
 }
 
 int main(int argc, char** argv) {

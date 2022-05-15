@@ -420,7 +420,10 @@ public:
 
 class Tree : public TreeInterface {
 public:
-    Tree() {}
+    Tree(NetInterface* network_provider) :
+        net(network_provider),
+        root(nullptr),
+        select_node(nullptr) {}
     ~Tree() = default;
 
     void search() override {}
@@ -440,7 +443,13 @@ public:
         }
         select_node = history.back();
     }
-    void expand() override {}
+
+    void expand() override {
+        if (select_node == nullptr)
+            throw AlphaZeroException("Expand error: tree select node is null");
+        std::cerr << "select node is not null" << std::endl;
+        select_node->expand(net);
+    }
     void update() override {}
     board::point get_action() override {}
     void set_root(NodeInterface* node) { root = node; }
@@ -449,4 +458,7 @@ protected:
     NodeInterface* root;
     NodeInterface* select_node;
     std::vector<NodeInterface*> history;
+
+private:
+    NetInterface* net;
 };
