@@ -945,6 +945,15 @@ TEST_F(TreeTest, UpdateMultiNode) {
   }
 }
 
+TEST_F(TreeTest, GetActionTest) {
+  NodeMock fake_node;
+  EXPECT_CALL(fake_node, best_action())
+    .WillOnce(Return(board::point(5)));
+  tree->set_root(&fake_node);
+  board::point move = tree->get_action();
+  EXPECT_TRUE(board::point(5).i == move.i);
+}
+
 int main(int argc, char** argv) {
   ::testing::InitGoogleMock(&argc, argv);
   return RUN_ALL_TESTS();

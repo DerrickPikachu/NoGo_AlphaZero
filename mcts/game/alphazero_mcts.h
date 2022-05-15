@@ -288,7 +288,7 @@ public:
         if (!is_expand)
             throw AlphaZeroException("Select error: node hasn't been expand");
         if (childs.empty())
-            return NULL;
+            return nullptr;
         float max_score = 0.0;
         Node* best_node;
         for (int i = 0; i < childs.size(); i++) {
@@ -456,7 +456,7 @@ public:
         }
     }
 
-    board::point get_action() override {}
+    board::point get_action() override { return root->best_action(); }
     void set_root(NodeInterface* node) { root = node; }
 
 protected:
