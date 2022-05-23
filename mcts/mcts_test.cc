@@ -954,6 +954,102 @@ TEST_F(TreeTest, GetActionTest) {
   EXPECT_TRUE(board::point(5).i == move.i);
 }
 
+class PlayerTest : public ::testing::Test {
+public:
+  class FakePlayer : public player {
+  public:
+    FakePlayer(const std::string& args="") : player(args) {}
+    action randomAction(const board& state) override {
+      return action::place(board::point(0), board::black);
+    }
+    action mctsAction(const board& state) override {
+      return action::place(board::point(1), board::black);
+    }
+    action zeroAction(const board& state) override {
+      return action::place(board::point(2), board::black);
+    }
+  };
+
+protected:
+  void SetUp() override {
+    test_player = nullptr;
+  }
+  void TearDown() override {
+    if (test_player != nullptr)
+      delete test_player;
+  }
+
+public:
+  player* test_player;
+};
+// player args: name=agent_name method=zero model=model_path simulation=1000
+// when ((method == zero || method == alphazero) && model != empty )
+// then use alphazero agent
+// otherwise use random agent or mcts agent
+TEST_F(PlayerTest, PCTakeActionTest1) {
+  // PC true test case
+  test_player = new FakePlayer(
+    "name=test_agent method=zero model=/abc simulation=1000 role=black");
+  action::place result = test_player->take_action(board());
+  EXPECT_EQ(result.position().i, board::point(2).i);
+}
+
+TEST_F(PlayerTest, PCTakeActionTest2) {
+  // PC false test case
+  test_player = new FakePlayer(
+    "name=test_agent method=zero simulation=1 role=black");
+  action::place result = test_player->take_action(board());
+  EXPECT_EQ(result.position().i, board::point(0).i);
+}
+
+TEST_F(PlayerTest, CCTakeActionTest1) {
+  // CC TFT test case
+  test_player = new FakePlayer(
+    "name=test_agent method=zero model=/abc simulation=1000 role=black");
+  action::place result = test_player->take_action(board());
+  EXPECT_EQ(result.position().i, board::point(2).i);
+}
+
+TEST_F(PlayerTest, CCTakeActionTest2) {
+  // CC FTF test case
+  test_player = new FakePlayer(
+    "name=test_agent method=alphazero simulation=11 role=black");
+  action::place result = test_player->take_action(board());
+  EXPECT_EQ(result.position().i, board::point(0).i);
+}
+
+TEST_F(PlayerTest, CACCTakeActionTest1) {
+  // CACC TFT test case
+  test_player = new FakePlayer(
+    "name=test_agent method=zero model=/abc simulation=1000 role=black");
+  action::place result = test_player->take_action(board());
+  EXPECT_EQ(result.position().i, board::point(2).i);
+}
+
+TEST_F(PlayerTest, CACCTakeActionTest2) {
+  // CACC FFT test case
+  test_player = new FakePlayer(
+    "name=test_agent method=mcts model=/abc simulation=1000 role=black");
+  action::place result = test_player->take_action(board());
+  EXPECT_EQ(result.position().i, board::point(1).i);
+}
+
+TEST_F(PlayerTest, CACCTakeActionTest3) {
+  // CACC FTF test case
+  test_player = new FakePlayer(
+    "name=test_agent method=alphazero simulation=11 role=black");
+  action::place result = test_player->take_action(board());
+  EXPECT_EQ(result.position().i, board::point(0).i);
+}
+
+TEST_F(PlayerTest, CACCTakeActionTest4) {
+  // CACC FTT test case
+  test_player = new FakePlayer(
+    "name=test_agent method=alphazero model=/abc simulation=11 role=black");
+  action::place result = test_player->take_action(board());
+  EXPECT_EQ(result.position().i, board::point(2).i);
+}
+
 int main(int argc, char** argv) {
   ::testing::InitGoogleMock(&argc, argv);
   return RUN_ALL_TESTS();

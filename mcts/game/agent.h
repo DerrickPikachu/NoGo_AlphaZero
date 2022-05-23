@@ -95,14 +95,17 @@ public:
 	}
 
 	virtual action take_action(const board& state) {
-		if (std::string(meta["name"]) == "mcts") {
+		std::string method = std::string(meta["method"]);
+		if ((method == "zero" || method == "alphazero") && meta.count("model"))
+			return zeroAction(state);
+		else if (method == "mcts") {
 		    return mctsAction(state);
 		} else {
 		    return randomAction(state);
 		}
 	}
 
-	action randomAction(const board& state) {
+	virtual action randomAction(const board& state) {
         std::shuffle(space.begin(), space.end(), engine);
         for (const action::place& move : space) {
             board after = state;
@@ -112,7 +115,7 @@ public:
         return action();
 	}
 
-	action mctsAction(const board& state) {
+	virtual action mctsAction(const board& state) {
         int parallel = int(meta["parallel"]);
         int actionSize = board::size_x * board::size_y;
         std::vector<Mcts> mcts(parallel);
@@ -136,6 +139,8 @@ public:
         }
         return action::place(board::point(bestMoveIndex), who);
 	}
+
+	virtual action zeroAction(const board& state) {}
 
     void runMcts(board state, Mcts* mcts) {
         mcts->setWho(who);
