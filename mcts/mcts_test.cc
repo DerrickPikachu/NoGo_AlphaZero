@@ -370,7 +370,8 @@ TEST_F(AlphaZeroNetTest, ForwardResultTest) {
 TEST_F(AlphaZeroNetTest, RefreshModelTest) {
   // TODO: Have something wrong. Need to fix.
   EXPECT_CALL(*write_pipe, write_to_pipe("refresh\n"));
-  alphazero_net->refresh_model();
+  EXPECT_CALL(*write_pipe, write_to_pipe("test.pth\n"));
+  alphazero_net->refresh_model("test.pth");
 }
 
 TEST_F(AlphaZeroNetTest, SendExitTest) {
@@ -1065,9 +1066,11 @@ protected:
       "/desktop/mcts/game/model_provider/test_model",
       9
     );
+    net->exec_net();
   }
 
   void TearDown() override {
+    net->send_exit();
     delete net;
   }
 
@@ -1077,7 +1080,6 @@ public:
 
 TEST_F(NetToProviderTest, ForwardBoardTest) {
   board test_board;
-  net->exec_net();
   std::string result = net->get_forward_result(test_board);
   std::cout << "forward result: " << result << std::endl;
   auto policy_value = net->parse_result(result);
@@ -1090,7 +1092,25 @@ TEST_F(NetToProviderTest, ForwardBoardTest) {
   EXPECT_FLOAT_EQ(1.0, policy_sum);
   EXPECT_TRUE(-1 <= value && value <= 1);
   EXPECT_EQ(81, policy.size());
-  net->send_exit();
+}
+
+TEST_F(NetToProviderTest, ModelRefreshTest) {
+  board test_board;
+  std::string pre_result = net->get_forward_result(test_board);
+  net->refresh_model("fake_weight.pth");
+  std::string result = net->get_forward_result(test_board);
+  EXPECT_FALSE(result == pre_result);
+}
+
+TEST_F(NetToProviderTest, ForwardTwoBoardTest) {
+  board test_board;
+  net->refresh_model("fake_weight.pth");
+  std::string result = net->get_forward_result(test_board);
+  std::cout << result << std::endl;
+  test_board.place(board::point(1));
+  std::string result2 = net->get_forward_result(test_board);
+  std::cout << result2 << std::endl;
+  EXPECT_NE(result, result2);
 }
 
 int main(int argc, char** argv) {

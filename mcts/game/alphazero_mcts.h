@@ -140,7 +140,7 @@ public:
     virtual ~NetInterface() {}
     virtual void exec_net() = 0;
     virtual std::string get_forward_result(const board&) = 0;
-    virtual void refresh_model() = 0;
+    virtual void refresh_model(std::string model_name) = 0;
     virtual void send_exit() = 0;
     virtual std::pair<std::vector<float>, float> parse_result(std::string) = 0; 
 };
@@ -188,8 +188,9 @@ public:
         return read_pipe->read_from_pipe();
     }
 
-    void refresh_model() override {
+    void refresh_model(std::string name) override {
         write_pipe->write_to_pipe("refresh\n");
+        write_pipe->write_to_pipe(name + "\n");
     }
 
     void send_exit() override {
