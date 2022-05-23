@@ -1106,10 +1106,8 @@ TEST_F(NetToProviderTest, ForwardTwoBoardTest) {
   board test_board;
   net->refresh_model("fake_weight.pth");
   std::string result = net->get_forward_result(test_board);
-  std::cout << result << std::endl;
   test_board.place(board::point(1));
   std::string result2 = net->get_forward_result(test_board);
-  std::cout << result2 << std::endl;
   EXPECT_NE(result, result2);
 }
 
