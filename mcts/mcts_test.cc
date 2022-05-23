@@ -298,28 +298,27 @@ TEST_F(TrajectorySocketTest, ReceiveTest) {
   EXPECT_EQ(message, received);
 }
 
+class WrapNet : public AlphaZeroNet {
+public:
+  WrapNet(
+    std::string net_path, std::string weight_path, int board_size) :
+    AlphaZeroNet(net_path, weight_path, board_size) {}
+  
+  void set_write_pipe(PipeInterface* pipe) {
+    write_pipe = pipe;
+  }
+
+  void set_read_pipe (PipeInterface* pipe) {
+    read_pipe = pipe;
+  }
+};
 
 class AlphaZeroNetTest : public ::testing::Test {
 protected:
-  class WrapNet : public AlphaZeroNet {
-  public:
-    WrapNet(
-      std::string net_path, std::string weight_path, int board_size) :
-      AlphaZeroNet(net_path, weight_path, board_size) {}
-    
-    void set_write_pipe(PipeInterface* pipe) {
-      write_pipe = pipe;
-    }
-
-    void set_read_pipe (PipeInterface* pipe) {
-      read_pipe = pipe;
-    }
-  };
-
   void SetUp() override {
     alphazero_net = new WrapNet(
       "/desktop/mcts/game/model_provider/alphazero_net.py",
-      "/desktop/mcts/game/model_provider/test_model/fake_weight.pth",
+      "/desktop/mcts/game/model_provider/test_model/",
       9
     );
     write_pipe = new PipeMock();
@@ -369,6 +368,7 @@ TEST_F(AlphaZeroNetTest, ForwardResultTest) {
 }
 
 TEST_F(AlphaZeroNetTest, RefreshModelTest) {
+  // TODO: Have something wrong. Need to fix.
   EXPECT_CALL(*write_pipe, write_to_pipe("refresh\n"));
   alphazero_net->refresh_model();
 }
@@ -430,9 +430,10 @@ protected:
 };
 
 TEST_F(PipeTest, ReadWriteTest) {
-  std::string test_message = "read write test\n";
+  std::string test_message = "read write test#";
   pipe->write_to_pipe(test_message);
   std::string result = pipe->read_from_pipe();
+  test_message.pop_back();
   EXPECT_EQ(result, test_message);
 }
 
@@ -461,10 +462,11 @@ TEST_F(PipeTest, CloseReadTest) {
 }
 
 TEST_F(PipeTest, RedirectStdoutTest) {
-  std::string test_message = "test redirect stdout\n";
+  std::string test_message = "test redirect stdout#";
   pipe->redirect_stdout();
-  std::cout << test_message;
+  std::cout << test_message << std::flush;
   std::string result = pipe->read_from_pipe();
+  test_message.pop_back();
   EXPECT_EQ(result, test_message);
 }
 
@@ -1048,6 +1050,47 @@ TEST_F(PlayerTest, CACCTakeActionTest4) {
     "name=test_agent method=alphazero model=/abc simulation=11 role=black");
   action::place result = test_player->take_action(board());
   EXPECT_EQ(result.position().i, board::point(2).i);
+}
+
+/*
+* Integration Test
+* In this part of test, all test cases are designed to test the correctness
+* of different class interaction.
+*/
+class NetToProviderTest : public ::testing::Test {
+protected:
+  void SetUp() override {
+    net = new AlphaZeroNet(
+      "/desktop/mcts/game/model_provider/alphazero_net.py",
+      "/desktop/mcts/game/model_provider/test_model",
+      9
+    );
+  }
+
+  void TearDown() override {
+    delete net;
+  }
+
+public:
+  NetInterface* net;
+};
+
+TEST_F(NetToProviderTest, ForwardBoardTest) {
+  board test_board;
+  net->exec_net();
+  std::string result = net->get_forward_result(test_board);
+  std::cout << "forward result: " << result << std::endl;
+  auto policy_value = net->parse_result(result);
+  std::vector<float> policy = policy_value.first;
+  float value = policy_value.second;
+  float policy_sum = 0;
+
+  for (int i = 0; i < policy.size(); i++)
+    policy_sum += policy[i];
+  EXPECT_FLOAT_EQ(1.0, policy_sum);
+  EXPECT_TRUE(-1 <= value && value <= 1);
+  EXPECT_EQ(81, policy.size());
+  net->send_exit();
 }
 
 int main(int argc, char** argv) {

@@ -91,15 +91,21 @@ public:
         if (!read_active) {
             throw ReadPipeException("Read after close read");
         }
-        std::string forward_result;
-        char buffer[820];
+        std::string forward_result = "";
+        char buffer[1024];
         int read_byte;
-        if ((read_byte = read(pipe_read, buffer, 819)) < 0) {
-            std::cerr << "read error" << std::endl;
-            exit(1);
+        while ((read_byte = read(pipe_read, buffer, 1023)) >= 0) {
+            buffer[read_byte] = '\0';
+            forward_result += std::string(buffer);
+            if (forward_result.back() == '#') {
+                forward_result.pop_back();
+                break;
+            }
         }
-        buffer[read_byte] = '\0';
-        forward_result = std::string(buffer);
+        if (read_byte < 0) {
+            std::cerr << "read error" << std::endl;
+            exit(-1);
+        }
         return forward_result;
     }
 

@@ -36,7 +36,8 @@ class Mediator:
         if cmd == 'forward':
             board_str = input()
             policy, value = self.model_forward(board_str)
-            print(self.encode_result(policy, value))
+            # print(self.encode_result(policy, value) + '#')
+            sys.stdout.write(self.encode_result(policy, value) + '#')
         elif cmd == 'refresh':
             model_name = input()
             self.refresh_model(model_name)

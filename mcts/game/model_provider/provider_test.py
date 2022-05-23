@@ -97,5 +97,25 @@ class MediatorTest(unittest.TestCase):
         self.assertEqual(output_str, ans_str)
 
 
+# Integration Test
+# Test the integration correctness of mediator and forwarder
+class MediatorForwarderTest(unittest.TestCase):
+    def setUp(self):
+        self.mediator = Mediator('test_model', board_size=9)
+    
+    def tearDown(self):
+        del self.mediator
+    
+    def testModelForward(self):
+        test_input = ','.join(['0.0'] * 81)
+        policy, value = self.mediator.model_forward(test_input)
+        policy_sum = 0.0
+        for prob in policy:
+            policy_sum += prob
+        self.assertEqual(9 * 9, len(policy))
+        self.assertAlmostEqual(policy_sum, 1.0, delta=0.0001)
+        self.assertTrue(-1 <= value <= 1)
+
+
 if __name__ == "__main__":
     unittest.main()
