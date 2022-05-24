@@ -1149,6 +1149,26 @@ TEST_F(TreeSearchTest, MCTSTest) {
     std::cout << child.get_visit_count() << " ";
   }
   std::cout << std::endl;
+  delete node;
+}
+
+TEST_F(TreeSearchTest, MCTSWithLargeSimulationTest) {
+  Node* node = new Node(board(), board::piece_type::black);
+  float root_value = node->expand(net);
+  node->update(root_value);
+  tree->set_root(node);
+  for (int i = 0; i < 5000; i++) {
+    tree->select();
+    float value = tree->expand();
+    tree->update(value);
+  }
+  auto childs = ((NodeTest::WrapNode*)node)->get_childs();
+  for (int i = 0; i < childs->size(); i++) {
+    Node child = std::get<2>(childs->at(i));
+    std::cout << child.get_visit_count() << " ";
+  }
+  std::cout << std::endl;
+  delete node;
 }
 
 int main(int argc, char** argv) {

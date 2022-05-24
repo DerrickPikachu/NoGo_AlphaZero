@@ -298,6 +298,7 @@ public:
             throw AlphaZeroException("Select error: node hasn't been expand");
         if (childs.empty())
             return nullptr;
+        // TODO: Add the test case when all the puct values are negative
         float max_score = -FLT_MAX;
         Node* best_node;
         int choosed_i = 0;
@@ -353,6 +354,8 @@ public:
     void reset() override {
         value_sum = 0.0;
         visit_count = 0;
+        // TODO: Fix the test to test is expand
+        is_expand = false;
         childs.clear();
         state = board();
     }
@@ -500,6 +503,8 @@ public:
 
     board::point get_action() override { return root->best_action(); }
     void set_root(NodeInterface* node) { root = node; }
+    // TODO: Add the reset test case
+    void reset() { root->reset(); }
 
 protected:
     NodeInterface* root;
