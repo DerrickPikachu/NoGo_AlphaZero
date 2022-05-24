@@ -1171,6 +1171,27 @@ TEST_F(TreeSearchTest, MCTSWithLargeSimulationTest) {
   delete node;
 }
 
+TEST_F(TreeSearchTest, MCTSCheckMemoryLeak) {
+  board test_board;
+  for (int i = 0; i < 10; i++) {
+    Node* node = new Node(test_board, board::piece_type::black);
+    
+    float root_value = node->expand(net);
+    tree->set_root(node);
+    for (int i = 0; i < 1000; i++) {
+      tree->select();
+      float value = tree->expand();
+      tree->update(value);
+    }
+
+    board::point move = tree->get_action();
+    test_board.place(move);
+    std::cout << test_board << std::endl;
+    tree->reset();
+    delete node;
+  }
+}
+
 int main(int argc, char** argv) {
   ::testing::InitGoogleMock(&argc, argv);
   return RUN_ALL_TESTS();

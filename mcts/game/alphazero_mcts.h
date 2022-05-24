@@ -459,6 +459,7 @@ public:
     virtual void update(float) = 0;
     virtual board::point get_action() = 0;
     virtual void set_root(NodeInterface*) = 0;
+    virtual void reset() = 0;
 };
 
 class Tree : public TreeInterface {
@@ -504,7 +505,7 @@ public:
     board::point get_action() override { return root->best_action(); }
     void set_root(NodeInterface* node) { root = node; }
     // TODO: Add the reset test case
-    void reset() { root->reset(); }
+    void reset() override { root->reset(); }
 
 protected:
     NodeInterface* root;
