@@ -6,6 +6,8 @@
 #include <fcntl.h>
 #include <exception>
 #include <tuple>
+#include <vector>
+#include <float.h>
 
 #include "board.h"
 #include "action.h"
@@ -296,16 +298,19 @@ public:
             throw AlphaZeroException("Select error: node hasn't been expand");
         if (childs.empty())
             return nullptr;
-        float max_score = 0.0;
+        float max_score = -FLT_MAX;
         Node* best_node;
+        int choosed_i = 0;
         for (int i = 0; i < childs.size(); i++) {
-            Node& child = std::get<2>(childs[i]);
+            Node* child = &std::get<2>(childs[i]);
             float score = puct(childs[i]);
             if (max_score < score) {
                 max_score = score;
-                best_node = &child;
+                best_node = child;
+                choosed_i = i;
             }
         }
+        best_node->expanded();
         return best_node;
     }
 
@@ -414,6 +419,35 @@ private:
     board::piece_type piece_color;
 };
 
+class SelectPath {
+public:
+    SelectPath(int size) {
+        path = new NodeInterface*[size];
+        back_index = 0;
+    }
+    ~SelectPath() {
+        clear();
+        delete[] path;
+    }
+
+    void push_back(NodeInterface* node) {
+        path[back_index++] = node;
+    }
+
+    int size() { return back_index; }
+    NodeInterface* back() { return path[back_index-1]; }
+    bool empty() { return back_index == 0; }
+    NodeInterface* at(int index) { return path[index]; }
+    void pop_back() { path[--back_index] = nullptr; }
+    void clear() {
+        for (int i = 0; i < back_index; i++)
+            path[i] = nullptr;
+    }
+private:
+    NodeInterface** path;
+    int back_index;
+};
+
 class TreeInterface {
 public:
     ~TreeInterface() {}
@@ -461,6 +495,7 @@ public:
         for (NodeInterface* node : history) {
             node->update(winrate);
         }
+        history.clear();
     }
 
     board::point get_action() override { return root->best_action(); }

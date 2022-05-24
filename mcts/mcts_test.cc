@@ -368,7 +368,6 @@ TEST_F(AlphaZeroNetTest, ForwardResultTest) {
 }
 
 TEST_F(AlphaZeroNetTest, RefreshModelTest) {
-  // TODO: Have something wrong. Need to fix.
   EXPECT_CALL(*write_pipe, write_to_pipe("refresh\n"));
   EXPECT_CALL(*write_pipe, write_to_pipe("test.pth\n"));
   alphazero_net->refresh_model("test.pth");
@@ -404,8 +403,6 @@ TEST_F(AlphaZeroNetTest, ExecNetTest) {
   alphazero_net->exec_net();
   alphazero_net->send_exit();
 }
-
-// TODO: AlphaZeroNet need an integration testing
 
 class PipeTest : public ::testing::Test {
 public:
@@ -626,6 +623,7 @@ TEST_F(NodeTest, UpdateTestCallMultipleTimes) {
   test_node->update(0.4);
   test_node->update(0.6);
   EXPECT_FLOAT_EQ((0.9 + 0.4 + 0.6) / 3, test_node->value());
+  
 }
 
 TEST_F(NodeTest, BestActionTest) {
@@ -658,7 +656,6 @@ TEST_F(NodeTest, BestActionWhenNoChilds) {
   EXPECT_EQ(-1, ans.i);
 }
 
-// TODO: need to add the test when root is white player.
 class WhiteNodeTest : public ::testing::Test {
 protected:
   void SetUp() override {
@@ -946,6 +943,8 @@ TEST_F(TreeTest, UpdateMultiNode) {
   for (int i = 0; i < 10; i++) {
     delete (NodeMock*)fake_history[i];
   }
+  auto history = ((WrapTree*)tree)->get_history();
+  EXPECT_TRUE(history.empty());
 }
 
 TEST_F(TreeTest, GetActionTest) {
@@ -1109,6 +1108,47 @@ TEST_F(NetToProviderTest, ForwardTwoBoardTest) {
   test_board.place(board::point(1));
   std::string result2 = net->get_forward_result(test_board);
   EXPECT_NE(result, result2);
+}
+
+class TreeSearchTest : public ::testing::Test {
+protected:
+  void SetUp() override {
+    net = new AlphaZeroNet(
+      "/desktop/mcts/game/model_provider/alphazero_net.py",
+      "/desktop/mcts/game/model_provider/test_model",
+      9
+    );
+    net->exec_net();
+    net->refresh_model("fake_weight.pth");
+    tree = new Tree(net);
+  }
+  void TearDown() override {
+    net->send_exit();
+    delete tree;
+    delete net;
+  }
+
+public:
+  NetInterface* net;
+  TreeInterface* tree;
+};
+
+TEST_F(TreeSearchTest, MCTSTest) {
+  Node* node = new Node(board(), board::piece_type::black);
+  float root_value = node->expand(net);
+  node->update(root_value);
+  tree->set_root(node);
+  for (int i = 0; i < 500; i++) {
+    tree->select();
+    float value = tree->expand();
+    tree->update(value);
+  }
+  auto childs = ((NodeTest::WrapNode*)node)->get_childs();
+  for (int i = 0; i < childs->size(); i++) {
+    Node child = std::get<2>(childs->at(i));
+    std::cout << child.get_visit_count() << " ";
+  }
+  std::cout << std::endl;
 }
 
 int main(int argc, char** argv) {
