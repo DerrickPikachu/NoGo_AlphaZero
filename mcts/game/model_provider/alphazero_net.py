@@ -7,10 +7,12 @@ sys.path.append('/desktop')
 
 from train.network import AlphaZeroResnet
 
+device = 'cuda'
+
 class Forwarder:
     def __init__(self, directory: str) -> None:
         self.directory_root = directory
-        self.network = AlphaZeroResnet(1, 10, input_size=(9, 9))
+        self.network = AlphaZeroResnet(1, 10, input_size=(9, 9)).to(device)
     
     def evaluate(self, state: torch.Tensor):
         policy_logic, value = self.network.forward(state)
@@ -24,6 +26,9 @@ class Forwarder:
     def load_weight(self, name: str):
         path = self.directory_root + '/' + name
         self.network.load_state_dict(torch.load(path))
+
+    def device(self):
+        return next(self.network.parameters()).device
         
 
 class Mediator:
@@ -56,7 +61,7 @@ class Mediator:
         for i in range(len(parsed_state)):
             tensor_state[i] = float(parsed_state[i])
         return tensor_state.view(
-            (1, 1, self.board_size, self.board_size))
+            (1, 1, self.board_size, self.board_size)).to(device)
     
     def _postprocess(self, raw_policy, raw_value):
         policy = raw_policy.view(81)

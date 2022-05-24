@@ -17,7 +17,7 @@ class ForwarderTest(unittest.TestCase):
         del self.forwarder
     
     def testEvaluate(self):
-        test_state = torch.rand((1, 1, 9, 9))
+        test_state = torch.rand((1, 1, 9, 9), device=device)
         action, value = self.forwarder.evaluate(test_state)
         action = action.view((81))
         sum = 0
@@ -40,7 +40,7 @@ class ForwarderTest(unittest.TestCase):
         network_mock.forward.assert_called_once_with(test_state)
         
     def testLoadWeight(self):
-        fake_network = AlphaZeroResnet(1, 10, input_size=(9, 9))
+        fake_network = AlphaZeroResnet(1, 10, input_size=(9, 9)).to(device)
         torch.save(fake_network.state_dict(), 'test_model/fake_weight.pth')
         
         self.forwarder.load_weight('fake_weight.pth')
@@ -49,6 +49,9 @@ class ForwarderTest(unittest.TestCase):
         load_param = [np for np in self.forwarder.network.parameters()]
         for p0, p1 in zip(origin_param, load_param):
             self.assertTrue(torch.equal(p0, p1))
+
+    def testDevice(self):
+        self.assertEqual(torch.device('cuda', index=0), self.forwarder.device())
         
         
 class MediatorTest(unittest.TestCase):
@@ -68,10 +71,11 @@ class MediatorTest(unittest.TestCase):
         test_input = ','.join(['0.0'] * 81)
         policy, value = self.mediator.model_forward(test_input)
         
-        preprocess_result = torch.tensor([0.0] * 81).view((1, 1, 9, 9))
+        preprocess_result = torch.tensor([0.0] * 81) \
+            .view((1, 1, 9, 9)).to(device)
         forwarder_mock.evaluate.assert_called_once()
-        evaluate_args = forwarder_mock.evaluate.call_args
-        self.assertTrue(torch.equal(evaluate_args, preprocess_result))
+        evaluate_args, _ = forwarder_mock.evaluate.call_args
+        self.assertTrue(torch.equal(evaluate_args[0], preprocess_result))
         self.assertEqual(value, 0.5)
         for prob in policy:
             self.assertAlmostEqual(prob, 1 / 81, delta=0.0001)
