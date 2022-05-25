@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch
 
 class AutoPaddingConv2d(nn.Module):
     def __init__(self, in_channels, kernel_size, is_extend=False, out_channels=None):
@@ -33,7 +34,7 @@ class BasicBlock(nn.Module):
         self.out_activation = nn.ReLU()
 
     def forward(self, x):
-        identity_mapping = self.identity(x)
+        identity_mapping = self.identity(torch.clone(x))
         conv_result = self.bone(x)
         shortcut_sum = conv_result + identity_mapping
         return self.out_activation(shortcut_sum)
@@ -80,8 +81,8 @@ class AlphaZeroResnet(nn.Module):
         for block in self.resnet:
             x = block(x)
         feature = x
-        policy = self.policy_head(feature)
-        value = self.value_head(feature)
+        policy = self.policy_head(torch.clone(feature))
+        value = self.value_head(torch.clone(feature))
         return policy, value
 
 
