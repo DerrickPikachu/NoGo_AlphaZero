@@ -502,6 +502,8 @@ public:
         history.clear();
     }
 
+    // TODO: [Important] must add the softmax of 
+    // the simulation count to choose action
     board::point get_action() override { return root->best_action(); }
     void set_root(NodeInterface* node) { root = node; }
     // TODO: Add the reset test case

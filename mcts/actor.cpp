@@ -48,7 +48,7 @@ int main(int argc, const char* argv[]) {
     std::cerr << "=====Traning Self Play=====" << std::endl;
     std::string player_arg = 
         "simulation=1000 explore=0.3 uct=normal parallel=1";
-    player black("name=mcts " + player_arg + " role=black");
-    player white("name=mcts " + player_arg + " role=white");
+    player black("name=mcts method=mcts " + player_arg + " role=black");
+    player white("name=mcts method=mcts " + player_arg + " role=white");
     self_play_loop(black, white);
 }
