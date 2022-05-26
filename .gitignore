@@ -12,3 +12,6 @@ build
 __pycache__
 *.pth
 *.pt
+log/
+weight/
+checkpoint/

@@ -59,6 +59,9 @@ public:
     }
     
     void store_transition(const action::place& move) override {
+        // Test
+        std::cerr << game_->state() << std::endl;
+
         int num_trajectory = trajectory_buffer.transitions_size();
         trajectory::transition* last_transition = 
             trajectory_buffer.mutable_transitions(num_trajectory - 1);

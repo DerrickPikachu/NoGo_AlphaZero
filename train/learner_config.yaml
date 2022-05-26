@@ -10,8 +10,15 @@ optimizer:
   nesterov: True
 
 trainer:
-  batch_size: 256
+  batch_size: 32
+  batch_to_train: 16
   checkpoint_freq: 5
+  checkpoint_dir: /desktop/checkpoint/
+  weight_dir: /desktop/weight/
+  log_dir: /desktop/log/
 
 replayer_buffer:
   size: 1024
+
+game:
+  board_size: 9
