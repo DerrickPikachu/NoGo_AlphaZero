@@ -53,7 +53,9 @@ class Trainer(TrainerInterface):
     def train(self, state, action, reward) -> None:
         policy, value = self.model_forward(state)
         p_loss, v_loss = self.compute_loss(policy, value, action, reward)
+        # TODO: need to return the loss value
         self._model_update(p_loss, v_loss)
+        return p_loss, v_loss
         
     def model_forward(self, batch_state: torch.Tensor):
         # TODO: check the input shape should be 

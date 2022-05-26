@@ -168,7 +168,10 @@ class TrainerTest(unittest.TestCase):
     def testTrain(self):
         parameters = [np for np in self.trainer.network.parameters()]
         temporary_params = [p.clone() for p in parameters]
-        self.trainer.train(self.batch_state, self.batch_action, self.batch_reward)
+        p_loss, v_loss = self.trainer.train(
+            self.batch_state, self.batch_action, self.batch_reward)
+        self.assertTrue(p_loss > 0.0)
+        self.assertTrue(v_loss > 0.0)
         for p0, p1 in zip(temporary_params, parameters):
             self.assertTrue(not torch.equal(p0, p1))
         
