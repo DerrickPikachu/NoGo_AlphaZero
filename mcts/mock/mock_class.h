@@ -69,7 +69,8 @@ public:
   MOCK_METHOD1(update, void(float));
   MOCK_METHOD0(value, float());
   MOCK_METHOD0(reset, void());
-  MOCK_METHOD1(best_action, board::point(std::string));
+  MOCK_METHOD2(best_action, board::point(
+    std::string, std::default_random_engine&));
   MOCK_METHOD0(get_state, board());
   MOCK_METHOD0(get_color, board::piece_type());
   MOCK_METHOD0(expanded, bool());

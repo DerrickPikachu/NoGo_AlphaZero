@@ -278,7 +278,8 @@ public:
     virtual void update(float value) = 0;
     virtual float value() = 0;
     virtual void reset() = 0;
-    virtual board::point best_action(std::string mode) = 0;
+    virtual board::point best_action(
+        std::string mode, std::default_random_engine&) = 0;
     virtual board get_state() = 0;
     virtual board::piece_type get_color() = 0;
     virtual bool expanded() = 0;
@@ -369,7 +370,8 @@ public:
         return value_sum / visit_count;
     }
 
-    board::point best_action(std::string mode) override {
+    board::point best_action(
+        std::string mode, std::default_random_engine& generator) override {
         board::point best_point;
         std::vector<int> visit_counts(childs.size());
         std::vector<board::point> moves(childs.size());
@@ -453,7 +455,6 @@ private:
     int visit_count;
     board state;
     board::piece_type piece_color;
-    std::default_random_engine generator;
 };
 
 class SelectPath {
@@ -491,7 +492,7 @@ public:
     virtual void select() = 0;
     virtual float expand() = 0;
     virtual void update(float) = 0;
-    virtual board::point get_action() = 0;
+    virtual board::point get_action(std::default_random_engine&) = 0;
     virtual void set_root(NodeInterface*) = 0;
     virtual void reset() = 0;
 };
@@ -539,7 +540,10 @@ public:
 
     // TODO: [Important] must add the softmax of 
     // the simulation count to choose action
-    board::point get_action() override { return root->best_action(mode); }
+    board::point get_action(std::default_random_engine& generator) override {
+        return root->best_action(mode, generator);
+    }
+
     void set_root(NodeInterface* node) { root = node; }
     // TODO: Add the reset test case
     void reset() override { root->reset(); delete root; }

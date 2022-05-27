@@ -164,7 +164,7 @@ public:
 			float value = mcts_tree->expand();
 			mcts_tree->update(value);
 		}
-		board::point move = mcts_tree->get_action();
+		board::point move = mcts_tree->get_action(engine);
 		std::cerr << "[selected move: " << move.i << "]" << std::endl;
 		mcts_tree->reset();
 		return action::place(move, who);

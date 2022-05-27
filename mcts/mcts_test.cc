@@ -644,9 +644,10 @@ TEST_F(NodeTest, BestActionTest) {
       child
     });
   }
+  std::default_random_engine generator;
 
   // Test target
-  board::point ans = test_node->best_action("evaluating");
+  board::point ans = test_node->best_action("evaluating", generator);
 
   EXPECT_EQ(3, ans.i);
 }
@@ -671,8 +672,9 @@ TEST_F(NodeTest, BestActionWithTrainingModeTest) {
   }
 
   std::vector<int> action_counter(5);
+  std::default_random_engine generator;
   for (int i = 0; i < 1000; i++) {
-    board::point action = test_node->best_action("training");
+    board::point action = test_node->best_action("training", generator);
     action_counter[action.i]++;
   }
   std::vector<float> probs(5);
@@ -696,7 +698,8 @@ TEST_F(NodeTest, BestActionWithTrainingModeTest) {
 }
 
 TEST_F(NodeTest, BestActionWhenNoChilds) {
-  board::point ans = test_node->best_action("evaluating");
+  std::default_random_engine generator;
+  board::point ans = test_node->best_action("evaluating", generator);
   EXPECT_EQ(-1, ans.i);
 }
 
@@ -994,10 +997,11 @@ TEST_F(TreeTest, UpdateMultiNode) {
 
 TEST_F(TreeTest, GetActionTest) {
   NodeMock fake_node;
-  EXPECT_CALL(fake_node, best_action("evaluating"))
+  std::default_random_engine generator;
+  EXPECT_CALL(fake_node, best_action("evaluating", generator))
     .WillOnce(Return(board::point(5)));
   tree->set_root(&fake_node);
-  board::point move = tree->get_action();
+  board::point move = tree->get_action(generator);
   EXPECT_TRUE(board::point(5).i == move.i);
 }
 

@@ -51,7 +51,7 @@ int main(int argc, const char* argv[]) {
     // player black("name=mcts method=mcts " + player_arg + " role=black");
     // player white("name=mcts method=mcts " + player_arg + " role=white");
     std::string player_arg = 
-        "method=alphazero model=/desktop/mcts/game/model_provider/test_model mode=training simulation=300";
+        "method=alphazero model=/desktop/mcts/game/model_provider/test_model mode=training simulation=200";
     player black("name=alphablack " + player_arg + " role=black");
     player white("name=alphawhite " + player_arg + " role=white");
     black.update_model("fake_weight.pth");
