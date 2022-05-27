@@ -14,13 +14,15 @@
 #include <map>
 #include <type_traits>
 #include <algorithm>
-#include "board.h"
-#include "action.h"
-#include "mcts.h"
 #include <fstream>
 #include <thread>
 #include <future>
 #include <ctime>
+
+#include "board.h"
+#include "action.h"
+#include "mcts.h"
+#include "alphazero_mcts.h"
 
 class agent {
 public:
@@ -80,8 +82,10 @@ protected:
  */
 class player : public random_agent {
 public:
-	player(const std::string& args = "") : random_agent("name=random role=unknown " + args),
-		space(board::size_x * board::size_y), who(board::empty) {
+	player(const std::string& args = "") : 
+		random_agent("name=random role=unknown " + args),
+		space(board::size_x * board::size_y), who(board::empty),
+		net(nullptr), mcts_tree(nullptr) {
 		if (name().find_first_of("[]():; ") != std::string::npos)
 			throw std::invalid_argument("invalid name: " + name());
 		if (role() == "black") who = board::black;
@@ -90,8 +94,17 @@ public:
 			throw std::invalid_argument("invalid role: " + role());
 		for (size_t i = 0; i < space.size(); i++)
 			space[i] = action::place(i, who);
-//		mcts.setWho(who);
-//		mcts.setUctType(meta["uct"]);
+		if (meta.count("model")) {
+			std::string path = std::string(meta["model"]);
+			// TODO: maybe change the net script path
+			net = new AlphaZeroNet(
+				"/desktop/mcts/game/model_provider/alphazero_net.py",
+				path,
+				board::size_x
+			);
+			net->exec_net();
+			mcts_tree = new Tree(net, std::string(meta["mode"]));
+		}
 	}
 
 	virtual action take_action(const board& state) {
@@ -140,7 +153,22 @@ public:
         return action::place(board::point(bestMoveIndex), who);
 	}
 
-	virtual action zeroAction(const board& state) {}
+	virtual action zeroAction(const board& state) {
+		Node* root = new Node(state, who);
+		root->expand(net);
+		if (root->is_end_state())
+			return action::place(board::point(0), who);
+		mcts_tree->set_root(root);
+		for (int i = 0; i < int(meta["simulation"]); i++) {
+			mcts_tree->select();
+			float value = mcts_tree->expand();
+			mcts_tree->update(value);
+		}
+		board::point move = mcts_tree->get_action();
+		std::cerr << "[selected move: " << move.i << "]" << std::endl;
+		mcts_tree->reset();
+		return action::place(move, who);
+	}
 
     void runMcts(board state, Mcts* mcts) {
         mcts->setWho(who);
@@ -149,7 +177,21 @@ public:
         mcts->search(state, int(meta["simulation"]), float(meta["explore"]));
     }
 
+	void update_model(std::string model_name) {
+		net->refresh_model(model_name);
+	}
+
+	void exit() {
+		if (net != nullptr) {
+			net->send_exit();
+			delete net;
+		}
+		delete mcts_tree;
+	}
+
 private:
 	std::vector<action::place> space;
 	board::piece_type who;
+	Tree* mcts_tree;
+	NetInterface* net;
 };

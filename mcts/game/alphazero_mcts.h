@@ -9,6 +9,7 @@
 #include <vector>
 #include <float.h>
 #include <random>
+#include <cstring>
 
 #include "board.h"
 #include "action.h"
@@ -317,18 +318,19 @@ public:
     }
 
     float expand(NetInterface* net) override {
-        if (is_expand) {
-            throw ExpandException(
-                "Expand error: The node has been expanded, but try to expand again");
-        }
         int action_space = board::size_x * board::size_y;
         board::piece_type child_color = 
             (piece_color == board::piece_type::black)? 
             board::piece_type::white : board::piece_type::black;
         std::vector<board::point> valid_actions = get_valid_actions();
         if (valid_actions.empty()) {  // end state
+            is_expand = true;
             return (child_color == board::piece_type::black)?
                 1.0 : -1.0;
+        }
+        if (is_expand) {
+            throw ExpandException(
+                "Expand error: The node has been expanded, but try to expand again");
         }
         std::string result = net->get_forward_result(state);
         std::pair<std::vector<float>, float> policy_value = 
@@ -399,6 +401,7 @@ public:
     board::piece_type get_color() override { return piece_color; }
     bool expanded() override { return is_expand; }
     int get_visit_count() { return visit_count; }
+    bool is_end_state() { return is_expand && childs.empty(); }
 
 private:
     float puct(std::tuple<float, board::point, Node>& child) {
@@ -539,7 +542,7 @@ public:
     board::point get_action() override { return root->best_action(mode); }
     void set_root(NodeInterface* node) { root = node; }
     // TODO: Add the reset test case
-    void reset() override { root->reset(); }
+    void reset() override { root->reset(); delete root; }
 
 protected:
     NodeInterface* root;

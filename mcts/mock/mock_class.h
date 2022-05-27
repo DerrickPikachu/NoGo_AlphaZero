@@ -4,7 +4,7 @@
 #include "../game/self_play.h"
 #include "../game/agent.h"
 #include "../game/board.h"
-#include "../game/alphazero_mcts.h"
+// #include "../game/alphazero_mcts.h"
 
 class EpisodeMock : public EpisodeInterface {
 public:

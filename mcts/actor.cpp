@@ -2,11 +2,11 @@
 #include <string>
 
 #include "episode.h"
+// #include "alphazero_mcts.h"
 #include "agent.h"
 #include "proto/trajectory.pb.h"
 #include "self_play.h"
 #include "trajectory_socket.h"
-#include "alphazero_mcts.h"
 
 
 void self_play_loop(player& black, player& white) {
@@ -46,9 +46,15 @@ void self_play_loop(player& black, player& white) {
 
 int main(int argc, const char* argv[]) {
     std::cerr << "=====Traning Self Play=====" << std::endl;
+    // std::string player_arg = 
+    //     "simulation=1000 explore=0.3 uct=normal parallel=1";
+    // player black("name=mcts method=mcts " + player_arg + " role=black");
+    // player white("name=mcts method=mcts " + player_arg + " role=white");
     std::string player_arg = 
-        "simulation=1000 explore=0.3 uct=normal parallel=1";
-    player black("name=mcts method=mcts " + player_arg + " role=black");
-    player white("name=mcts method=mcts " + player_arg + " role=white");
+        "method=alphazero model=/desktop/mcts/game/model_provider/test_model mode=training simulation=300";
+    player black("name=alphablack " + player_arg + " role=black");
+    player white("name=alphawhite " + player_arg + " role=white");
+    black.update_model("fake_weight.pth");
+    white.update_model("fake_weight.pth");
     self_play_loop(black, white);
 }

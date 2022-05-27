@@ -81,7 +81,7 @@ def self_play_loop(config: dict, actor_socket: TrajectoryServer):
             replay_buffer.append(transition)
         print("replay buffer size: ", len(replay_buffer))
 
-        training(trainer, replay_buffer, writer, iter, config)
+        # training(trainer, replay_buffer, writer, iter, config)
         print("-----------------------------------------")
         iter += 1
 

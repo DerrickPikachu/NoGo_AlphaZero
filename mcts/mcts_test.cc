@@ -1022,8 +1022,10 @@ protected:
     test_player = nullptr;
   }
   void TearDown() override {
-    if (test_player != nullptr)
+    if (test_player != nullptr) {
+      test_player->exit();
       delete test_player;
+    }
   }
 
 public:
