@@ -1079,12 +1079,21 @@ public:
 
 TEST_F(NetToProviderTest, ForwardBoardTest) {
   board test_board;
+  net->refresh_model("fake_weight.pth");
   std::string result = net->get_forward_result(test_board);
-  std::cout << "forward result: " << result << std::endl;
+  // std::cout << "forward result: " << result << std::endl;
   auto policy_value = net->parse_result(result);
   std::vector<float> policy = policy_value.first;
   float value = policy_value.second;
   float policy_sum = 0;
+
+  std::cerr << "policy: " << std::endl;
+  for (int i = 0; i < policy.size(); i++) {
+    printf("%.3f ", policy[i]);
+    if (i % board::size_y == board::size_y - 1)
+      std::cerr << std::endl;
+  }
+  std::cerr << "value: " << value << std::endl;
 
   for (int i = 0; i < policy.size(); i++)
     policy_sum += policy[i];
@@ -1133,63 +1142,145 @@ public:
   TreeInterface* tree;
 };
 
-TEST_F(TreeSearchTest, MCTSTest) {
-  Node* node = new Node(board(), board::piece_type::black);
-  float root_value = node->expand(net);
-  node->update(root_value);
-  tree->set_root(node);
-  for (int i = 0; i < 500; i++) {
-    tree->select();
-    float value = tree->expand();
-    tree->update(value);
-  }
-  auto childs = ((NodeTest::WrapNode*)node)->get_childs();
-  for (int i = 0; i < childs->size(); i++) {
-    Node child = std::get<2>(childs->at(i));
-    std::cout << child.get_visit_count() << " ";
-  }
-  std::cout << std::endl;
-  delete node;
-}
+// TEST_F(TreeSearchTest, MCTSTest) {
+//   Node* node = new Node(board(), board::piece_type::black);
+//   float root_value = node->expand(net);
+//   node->update(root_value);
+//   tree->set_root(node);
+//   for (int i = 0; i < 500; i++) {
+//     tree->select();
+//     float value = tree->expand();
+//     tree->update(value);
+//   }
+//   auto childs = ((NodeTest::WrapNode*)node)->get_childs();
+//   for (int i = 0; i < childs->size(); i++) {
+//     Node child = std::get<2>(childs->at(i));
+//     std::cout << child.get_visit_count() << " ";
+//   }
+//   std::cout << std::endl;
+//   delete node;
+// }
 
-TEST_F(TreeSearchTest, MCTSWithLargeSimulationTest) {
-  Node* node = new Node(board(), board::piece_type::black);
-  float root_value = node->expand(net);
-  node->update(root_value);
-  tree->set_root(node);
-  for (int i = 0; i < 5000; i++) {
-    tree->select();
-    float value = tree->expand();
-    tree->update(value);
-  }
-  auto childs = ((NodeTest::WrapNode*)node)->get_childs();
-  for (int i = 0; i < childs->size(); i++) {
-    Node child = std::get<2>(childs->at(i));
-    std::cout << child.get_visit_count() << " ";
-  }
-  std::cout << std::endl;
-  delete node;
-}
+// TEST_F(TreeSearchTest, MCTSWithLargeSimulationTest) {
+//   Node* node = new Node(board(), board::piece_type::black);
+//   float root_value = node->expand(net);
+//   node->update(root_value);
+//   tree->set_root(node);
+//   for (int i = 0; i < 5000; i++) {
+//     tree->select();
+//     float value = tree->expand();
+//     tree->update(value);
+//   }
+//   auto childs = ((NodeTest::WrapNode*)node)->get_childs();
+//   for (int i = 0; i < childs->size(); i++) {
+//     Node child = std::get<2>(childs->at(i));
+//     std::cout << child.get_visit_count() << " ";
+//   }
+//   std::cout << std::endl;
+//   delete node;
+// }
 
-TEST_F(TreeSearchTest, MCTSCheckMemoryLeak) {
-  board test_board;
-  for (int i = 0; i < 10; i++) {
-    Node* node = new Node(test_board, board::piece_type::black);
+// TEST_F(TreeSearchTest, MCTSCheckMemoryLeak) {
+//   board test_board;
+//   for (int i = 0; i < 10; i++) {
+//     Node* node = new Node(test_board, board::piece_type::black);
     
-    float root_value = node->expand(net);
-    tree->set_root(node);
-    for (int i = 0; i < 1000; i++) {
-      tree->select();
-      float value = tree->expand();
-      tree->update(value);
-    }
+//     float root_value = node->expand(net);
+//     tree->set_root(node);
+//     for (int i = 0; i < 1000; i++) {
+//       tree->select();
+//       float value = tree->expand();
+//       tree->update(value);
+//     }
 
-    board::point move = tree->get_action();
-    test_board.place(move);
-    std::cout << test_board << std::endl;
-    tree->reset();
-    delete node;
+//     board::point move = tree->get_action();
+//     test_board.place(move);
+//     std::cout << test_board << std::endl;
+//     tree->reset();
+//     delete node;
+//   }
+// }
+
+class ModelTest : public ::testing::Test {
+protected:
+  void SetUp() override {
+    net = new AlphaZeroNet(
+      "/desktop/mcts/game/model_provider/alphazero_net.py",
+      "/desktop/mcts/game/model_provider/test_model",
+      9
+    );
+    net->exec_net();
+    net->refresh_model("fake_weight.pth");
+    black = new player("name=random method=random role=black seed=553");
+    white = new player("name=random method=random role=white seed=23534");
   }
+
+  void TearDown() override {
+    net->send_exit();
+    delete net;
+    delete black;
+    delete white;
+    test_board = board();
+  }
+
+public:
+  NetInterface* net;
+  player* white;
+  player* black;
+  board test_board;
+};
+
+TEST_F(ModelTest, EndStateTest) {
+  int step = 0;
+  while (true) {
+    action move = (step % 2 == 0)? 
+      black->take_action(test_board) :
+      white->take_action(test_board);
+    if (move.apply(test_board) != board::legal)
+      break;
+    step++;
+  }
+  float win_value = (step % 2 == 0)? -1 : 1;
+  std::cerr << "win_value: " << win_value << std::endl;
+  std::cerr << test_board << std::endl;
+  std::string result = net->get_forward_result(test_board);
+  auto policy_value = net->parse_result(result);
+  std::vector<float> policy = policy_value.first;
+  float value = policy_value.second;
+
+  std::cerr << "policy: " << std::endl;
+  for (int i = 0; i < policy.size(); i++) {
+    printf("%.3f ", policy[i]);
+    if (i % board::size_y == board::size_y - 1)
+      std::cerr << std::endl;
+  }
+  std::cerr << "value: " << value << std::endl;
+}
+
+TEST_F(ModelTest, NormalBoardTest) {
+  int step = 0;
+  while (true) {
+    action move = (step % 2 == 0)? 
+      black->take_action(test_board) :
+      white->take_action(test_board);
+    move.apply(test_board);
+    step++;
+    if (step == 40)
+      break;
+  }
+  std::cerr << test_board << std::endl;
+  std::string result = net->get_forward_result(test_board);
+  auto policy_value = net->parse_result(result);
+  std::vector<float> policy = policy_value.first;
+  float value = policy_value.second;
+
+  std::cerr << "policy: " << std::endl;
+  for (int i = 0; i < policy.size(); i++) {
+    printf("%.3f ", policy[i]);
+    if (i % board::size_y == board::size_y - 1)
+      std::cerr << std::endl;
+  }
+  std::cerr << "value: " << value << std::endl;
 }
 
 int main(int argc, char** argv) {
