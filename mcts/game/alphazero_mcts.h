@@ -8,6 +8,7 @@
 #include <tuple>
 #include <vector>
 #include <float.h>
+#include <random>
 
 #include "board.h"
 #include "action.h"
@@ -276,7 +277,7 @@ public:
     virtual void update(float value) = 0;
     virtual float value() = 0;
     virtual void reset() = 0;
-    virtual board::point best_action() = 0;
+    virtual board::point best_action(std::string mode) = 0;
     virtual board get_state() = 0;
     virtual board::piece_type get_color() = 0;
     virtual bool expanded() = 0;
@@ -366,15 +367,30 @@ public:
         return value_sum / visit_count;
     }
 
-    board::point best_action() override {
-        int max_visit_count = 0;
+    board::point best_action(std::string mode) override {
         board::point best_point;
+        std::vector<int> visit_counts(childs.size());
+        std::vector<board::point> moves(childs.size());
         for (int i = 0; i < childs.size(); i++) {
             Node& child_node = std::get<2>(childs[i]);
-            if (child_node.get_visit_count() > max_visit_count) {
-                max_visit_count = child_node.get_visit_count();
-                best_point = std::get<1>(childs[i]);
+            visit_counts[i] = child_node.get_visit_count();
+            moves[i] = std::get<1>(childs[i]);
+        }
+        if (mode == "evaluating") {
+            int max_visit_count = 0;
+            for (int i = 0; i < childs.size(); i++) {
+                if (max_visit_count < visit_counts[i]) {
+                    max_visit_count = visit_counts[i];
+                    best_point = moves[i];
+                }
             }
+        } else if (mode == "training") {
+            std::vector<float> probs = softmax_prob(visit_counts);
+            std::discrete_distribution<int> distribution(
+                probs.begin(), probs.end()
+            );
+            int sampled = distribution(generator);
+            best_point = moves[sampled];
         }
         return best_point;
     }
@@ -411,6 +427,20 @@ private:
         return valid_actions;
     }
 
+    std::vector<float> softmax_prob(std::vector<int> visit_counts) {
+        const int softmax_z = 2;
+        float total = 0.0;
+        std::vector<float> probs(visit_counts.size());
+        for (int i = 0; i < visit_counts.size(); i++) {
+            probs[i] = pow(visit_counts[i], softmax_z);
+            total += probs[i];
+        }
+        for (int i = 0; i < visit_counts.size(); i++) {
+            probs[i] /= total;
+        }
+        return probs;
+    }
+
 protected:
     std::vector<std::tuple<float, board::point, Node>> childs;
     bool is_expand;
@@ -420,6 +450,7 @@ private:
     int visit_count;
     board state;
     board::piece_type piece_color;
+    std::default_random_engine generator;
 };
 
 class SelectPath {
@@ -464,10 +495,11 @@ public:
 
 class Tree : public TreeInterface {
 public:
-    Tree(NetInterface* network_provider) :
+    Tree(NetInterface* network_provider, std::string mcts_mode) :
         net(network_provider),
         root(nullptr),
-        select_node(nullptr) {}
+        select_node(nullptr),
+        mode(mcts_mode) {}
     ~Tree() = default;
 
     void select() override {
@@ -504,7 +536,7 @@ public:
 
     // TODO: [Important] must add the softmax of 
     // the simulation count to choose action
-    board::point get_action() override { return root->best_action(); }
+    board::point get_action() override { return root->best_action(mode); }
     void set_root(NodeInterface* node) { root = node; }
     // TODO: Add the reset test case
     void reset() override { root->reset(); }
@@ -513,6 +545,7 @@ protected:
     NodeInterface* root;
     NodeInterface* select_node;
     std::vector<NodeInterface*> history;
+    std::string mode;
 
 private:
     NetInterface* net;

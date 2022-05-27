@@ -646,13 +646,57 @@ TEST_F(NodeTest, BestActionTest) {
   }
 
   // Test target
-  board::point ans = test_node->best_action();
+  board::point ans = test_node->best_action("evaluating");
 
   EXPECT_EQ(3, ans.i);
 }
 
+TEST_F(NodeTest, BestActionWithTrainingModeTest) {
+  std::vector<int> simulation_count = {
+    19, 15, 55, 77, 3
+  };
+  for (int i = 0; i < 5; i++) {
+    board tem = test_node->get_state();
+    board::point action(i);
+    tem.place(action);
+    Node child(tem, board::piece_type::white);
+    for (int j = 0; j < simulation_count[i]; j++) {
+      child.update(0.0);  // accumulate visit count
+    }
+    node_childs->push_back({
+      0.0,
+      action,
+      child
+    });
+  }
+
+  std::vector<int> action_counter(5);
+  for (int i = 0; i < 1000; i++) {
+    board::point action = test_node->best_action("training");
+    action_counter[action.i]++;
+  }
+  std::vector<float> probs(5);
+  float total = 0.0;
+  for (int i = 0; i < 5; i++) {
+    float tem = pow(simulation_count[i], 2);
+    probs[i] = tem;
+    total += tem;
+  }
+  for (int i = 0; i < 5; i++) {
+    probs[i] /= total;
+  }
+
+  for (int i = 0; i < 5; i++) {
+    std::cerr << action_counter[i] << " ";
+    int expected = probs[i] * 1000;
+    int miss = abs(expected - action_counter[i]);
+    EXPECT_TRUE(miss < 50);
+  }
+  std::cerr << std::endl;
+}
+
 TEST_F(NodeTest, BestActionWhenNoChilds) {
-  board::point ans = test_node->best_action();
+  board::point ans = test_node->best_action("evaluating");
   EXPECT_EQ(-1, ans.i);
 }
 
@@ -756,7 +800,8 @@ class TreeTest : public ::testing::Test {
 public:
   class WrapTree : public Tree {
   public:
-    WrapTree(NetInterface* network_provider) : Tree(network_provider) {}
+    WrapTree(NetInterface* network_provider, std::string mcts_mode) :
+     Tree(network_provider, mcts_mode) {}
 
     void set_history(std::vector<NodeInterface*> fake_history) {
       history = fake_history;
@@ -785,7 +830,7 @@ public:
 
 protected:
   void SetUp() override {
-    tree = new Tree(&fake_net);
+    tree = new Tree(&fake_net, "evaluating");
   }
 
   void TearDown() override {
@@ -949,7 +994,7 @@ TEST_F(TreeTest, UpdateMultiNode) {
 
 TEST_F(TreeTest, GetActionTest) {
   NodeMock fake_node;
-  EXPECT_CALL(fake_node, best_action())
+  EXPECT_CALL(fake_node, best_action("evaluating"))
     .WillOnce(Return(board::point(5)));
   tree->set_root(&fake_node);
   board::point move = tree->get_action();
@@ -1129,7 +1174,7 @@ protected:
     );
     net->exec_net();
     net->refresh_model("fake_weight.pth");
-    tree = new Tree(net);
+    tree = new Tree(net, "evaluating");
   }
   void TearDown() override {
     net->send_exit();
