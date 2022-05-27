@@ -1,3 +1,4 @@
+from re import purge
 from trajectory_socket import TrajectoryServer
 from replay_buffer import ReplayBuffer, Transition
 from trainer import Trainer, device
@@ -9,14 +10,23 @@ from torch.utils.tensorboard import SummaryWriter
 import yaml
 from pathlib import Path
 from tqdm import tqdm
+import pickle
 # import argparse
+
+def store_replay_buffer(replay_buffer: ReplayBuffer, config: dict):
+    file = open(config['replay_buffer']['store_path'], 'wb')
+    pickle.dump(replay_buffer, file)
+    file.close()
+
+def restore_replay_buffer(config: dict):
+    file = open(config['replay_buffer']['store_path'], 'rb')
+    return pickle.load(file)
+    
 
 def training(trainer: Trainer, replay_buffer: ReplayBuffer, 
              writer: SummaryWriter, iter: int, config: dict):
     batch_size = config['trainer']['batch_size']
     board_size = config['game']['board_size']
-    if len(replay_buffer) < batch_size * config['trainer']['batch_to_train']:
-        return
     
     data_loader = DataLoader(
         dataset=replay_buffer,
@@ -28,6 +38,7 @@ def training(trainer: Trainer, replay_buffer: ReplayBuffer,
     total_p_loss = 0.0
     total_v_loss = 0.0
     for batch_transition in tqdm(data_loader):
+        step += 1
         batch_state = batch_transition.state.view(
             -1, 1, board_size, board_size).to(device)
         batch_action = batch_transition.action.to(device)
@@ -43,7 +54,6 @@ def training(trainer: Trainer, replay_buffer: ReplayBuffer,
         
         total_p_loss += p_loss.item()
         total_v_loss += v_loss.item()
-        step += 1
     
     p_loss = total_p_loss / step
     v_loss = total_v_loss / step
@@ -56,10 +66,26 @@ def training(trainer: Trainer, replay_buffer: ReplayBuffer,
 
 
 def self_play_loop(config: dict, actor_socket: TrajectoryServer):
-    replay_buffer = ReplayBuffer(config['replayer_buffer']['size'])
+    replay_buffer = ReplayBuffer(config['replay_buffer']['size'])
     trainer = Trainer(config)
-    writer = SummaryWriter(log_dir=config['trainer']['log_dir'])
     iter = 0
+    if config['restore']['active'] == True:
+        print("------------Restore Trajectory------------")
+        replay_buffer = restore_replay_buffer(config)
+        trainer.load_model(config['trainer']['checkpoint_dir'] + 
+            str(config['restore']['iter']) + '.pth')
+        iter = config['restore']['iter']
+        print('replay_buffer size: ', len(replay_buffer))
+        print('start iteration: ', iter)
+    else:
+        print('no restore')
+        trainer.save_model(config['trainer']['checkpoint_dir'] + '0.pth')
+        trainer.save_weight(config['trainer']['weight_dir'] + 'latest.pt')
+    
+    writer = SummaryWriter(
+        log_dir=config['trainer']['log_dir'],
+        purge_step=iter
+    )
 
     while True:
         byte_int = actor_socket.recv(4)
@@ -81,9 +107,13 @@ def self_play_loop(config: dict, actor_socket: TrajectoryServer):
             replay_buffer.append(transition)
         print("replay buffer size: ", len(replay_buffer))
 
-        # training(trainer, replay_buffer, writer, iter, config)
+        state_to_train = \
+            config['game']['board_size'] * config['trainer']['batch_to_train']
+        if len(replay_buffer) < state_to_train:
+            training(trainer, replay_buffer, writer, iter, config)
+            iter += 1
         print("-----------------------------------------")
-        iter += 1
+        store_replay_buffer(replay_buffer, config)
 
 
 def main():

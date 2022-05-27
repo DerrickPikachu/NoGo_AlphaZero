@@ -10,15 +10,20 @@ optimizer:
   nesterov: True
 
 trainer:
-  batch_size: 32
-  batch_to_train: 16
+  batch_size: 512
+  batch_to_train: 10
   checkpoint_freq: 5
   checkpoint_dir: /desktop/checkpoint/
   weight_dir: /desktop/weight/
   log_dir: /desktop/log/
 
-replayer_buffer:
-  size: 1024
+replay_buffer:
+  size: 15360
+  store_path: /desktop/trajectory/rpb.obj
 
 game:
   board_size: 9
+
+restore:
+  iter: 0
+  active: True
