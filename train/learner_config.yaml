@@ -4,7 +4,7 @@ model:
   input_size: [9, 9]
 
 optimizer:
-  learning_rate: 0.02
+  learning_rate: 0.1
   momentum: 0.9
   weight_decay: 1.e-4
   nesterov: True
@@ -27,3 +27,5 @@ game:
 restore:
   iter: 0
   active: True
+
+learn_from_dataset: True

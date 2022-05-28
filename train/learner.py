@@ -49,7 +49,7 @@ def training(trainer: Trainer, replay_buffer: ReplayBuffer,
         if iter % config['trainer']['checkpoint_freq'] == 0:
             trainer.save_model(
                 config['trainer']['checkpoint_dir'] + str(iter) + '.pth')
-            trainer.save_weight(config['trainer']['weight_dir'] + 'lastest.pt')
+            trainer.save_weight(config['trainer']['weight_dir'] + 'latest.pt')
             trainer.save_weight(config['trainer']['weight_dir'] + str(iter) + '.pt')
         
         total_p_loss += p_loss.item()
@@ -110,17 +110,40 @@ def self_play_loop(config: dict, actor_socket: TrajectoryServer):
         state_to_train = \
             config['game']['board_size'] * config['trainer']['batch_to_train']
         if len(replay_buffer) < state_to_train:
-            training(trainer, replay_buffer, writer, iter, config)
+            # training(trainer, replay_buffer, writer, iter, config)
             iter += 1
         print("-----------------------------------------")
         store_replay_buffer(replay_buffer, config)
 
+def train_loop(config: dict):
+    replay_buffer = ReplayBuffer(config['replay_buffer']['size'])
+    trainer = Trainer(config)
+    iter = 0
+    if config['restore']['active'] == True:
+        print("------------Restore Trajectory------------")
+        replay_buffer = restore_replay_buffer(config)
+        print('replay_buffer size: ', len(replay_buffer))
+
+    trainer.save_model(config['trainer']['checkpoint_dir'] + '0.pth')
+    trainer.save_weight(config['trainer']['weight_dir'] + 'latest.pt')    
+    writer = SummaryWriter(
+        log_dir=config['trainer']['log_dir'],
+        purge_step=iter
+    )
+    while True:
+        training(trainer, replay_buffer, writer, iter, config)
+        iter += 1
+    
 
 def main():
     config = yaml.safe_load(Path('learner_config.yaml').read_text())
-    learner_server = TrajectoryServer('0.0.0.0', 7000)
-    learner_server.start()
-    self_play_loop(config, learner_server)
+    if (config['learn_from_dataset'] == False):
+        learner_server = TrajectoryServer('0.0.0.0', 7000)
+        learner_server.start()
+        self_play_loop(config, learner_server)
+    elif (config['learn_from_dataset'] == True):
+        print('---------Training From Dataset---------')
+        train_loop(config)
 
 
 if __name__ == "__main__":
