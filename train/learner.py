@@ -66,6 +66,7 @@ def training(trainer: Trainer, replay_buffer: ReplayBuffer,
 
 
 def self_play_loop(config: dict, actor_socket: TrajectoryServer):
+    discount = config['replay_buffer']['discount']
     replay_buffer = ReplayBuffer(config['replay_buffer']['size'])
     trainer = Trainer(config)
     iter = 0
@@ -101,10 +102,12 @@ def self_play_loop(config: dict, actor_socket: TrajectoryServer):
         last_reward = float(parsed_trajectory.transitions[-1].reward)
         print("num_transition: ", len(parsed_trajectory.transitions))
         print("last reward: ", last_reward)
-        for tran in parsed_trajectory.transitions:
+        reward = last_reward
+        for tran in reversed(parsed_trajectory.transitions):
             state_tensor = torch.tensor(tran.state)
-            transition = Transition(state_tensor, tran.action_id, last_reward)
+            transition = Transition(state_tensor, tran.action_id, reward)
             replay_buffer.append(transition)
+            reward *= discount
         print("replay buffer size: ", len(replay_buffer))
 
         state_to_train = \
@@ -125,7 +128,7 @@ def train_loop(config: dict):
         print('replay_buffer size: ', len(replay_buffer))
 
     trainer.save_model(config['trainer']['checkpoint_dir'] + '0.pth')
-    trainer.save_weight(config['trainer']['weight_dir'] + 'latest.pt')    
+    trainer.save_weight(config['trainer']['weight_dir'] + 'latest.pt')
     writer = SummaryWriter(
         log_dir=config['trainer']['log_dir'],
         purge_step=iter
