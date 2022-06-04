@@ -34,35 +34,37 @@ def training(trainer: Trainer, replay_buffer: ReplayBuffer,
         shuffle=True
     )
     print('---------New Iteration---------')
-    step = 0
-    total_p_loss = 0.0
-    total_v_loss = 0.0
-    for batch_transition in tqdm(data_loader):
-        step += 1
-        batch_state = batch_transition.state.view(
-            -1, 1, board_size, board_size).to(device)
-        batch_action = batch_transition.action.to(device)
-        batch_reward = batch_transition.reward.view(-1, 1).float().to(device)
+    for i in range(config['trainer']['epoch']):
+        step = 0
+        total_p_loss = 0.0
+        total_v_loss = 0.0
 
-        p_loss, v_loss = trainer.train(batch_state, batch_action, batch_reward)
+        for batch_transition in tqdm(data_loader):
+            step += 1
+            batch_state = batch_transition.state.view(
+                -1, 1, board_size, board_size).to(device)
+            batch_action = batch_transition.action.to(device)
+            batch_reward = batch_transition.reward.view(-1, 1).float().to(device)
 
-        if iter % config['trainer']['checkpoint_freq'] == 0:
-            trainer.save_model(
-                config['trainer']['checkpoint_dir'] + str(iter) + '.pth')
-            trainer.save_weight(config['trainer']['weight_dir'] + 'latest.pt')
-            trainer.save_weight(config['trainer']['weight_dir'] + str(iter) + '.pt')
+            p_loss, v_loss = trainer.train(batch_state, batch_action, batch_reward)
+            
+            total_p_loss += p_loss.item()
+            total_v_loss += v_loss.item()
         
-        total_p_loss += p_loss.item()
-        total_v_loss += v_loss.item()
-    
-    p_loss = total_p_loss / step
-    v_loss = total_v_loss / step
-    writer.add_scalar('loss/policy', p_loss, iter)
-    writer.add_scalar('loss/value', v_loss, iter)
-    writer.add_scalar('loss/total', p_loss + v_loss, iter)
-    print('policy loss: {}'.format(p_loss))
-    print('value loss: {}'.format(v_loss))
-    print('total: ', p_loss + v_loss)
+        p_loss = total_p_loss / step
+        v_loss = total_v_loss / step
+        writer.add_scalar('loss/policy', p_loss, iter)
+        writer.add_scalar('loss/value', v_loss, iter)
+        writer.add_scalar('loss/total', p_loss + v_loss, iter)
+        print('policy loss: {}'.format(p_loss))
+        print('value loss: {}'.format(v_loss))
+        print('total: ', p_loss + v_loss)
+
+    if iter % config['trainer']['checkpoint_freq'] == 0:
+        trainer.save_model(
+            config['trainer']['checkpoint_dir'] + str(iter) + '.pth')
+        trainer.save_weight(config['trainer']['weight_dir'] + 'latest.pt')
+        trainer.save_weight(config['trainer']['weight_dir'] + str(iter) + '.pt')
 
 
 def self_play_loop(config: dict, actor_socket: TrajectoryServer):
@@ -87,6 +89,7 @@ def self_play_loop(config: dict, actor_socket: TrajectoryServer):
         log_dir=config['trainer']['log_dir'],
         purge_step=iter
     )
+    actor_socket.start()
 
     while True:
         byte_int = actor_socket.recv(4)
@@ -111,9 +114,9 @@ def self_play_loop(config: dict, actor_socket: TrajectoryServer):
         print("replay buffer size: ", len(replay_buffer))
 
         state_to_train = \
-            config['game']['board_size'] * config['trainer']['batch_to_train']
-        if len(replay_buffer) < state_to_train:
-            # training(trainer, replay_buffer, writer, iter, config)
+            config['trainer']['batch_size'] * config['trainer']['batch_to_train']
+        if len(replay_buffer) >= state_to_train:
+            training(trainer, replay_buffer, writer, iter, config)
             iter += 1
         print("-----------------------------------------")
         store_replay_buffer(replay_buffer, config)
@@ -142,7 +145,7 @@ def main():
     config = yaml.safe_load(Path('learner_config.yaml').read_text())
     if (config['learn_from_dataset'] == False):
         learner_server = TrajectoryServer('0.0.0.0', 7000)
-        learner_server.start()
+        # learner_server.start()
         self_play_loop(config, learner_server)
     elif (config['learn_from_dataset'] == True):
         print('---------Training From Dataset---------')

@@ -8,6 +8,8 @@
 #include "self_play.h"
 #include "trajectory_socket.h"
 
+const int UPDATE_MODEL_FREQ = 5;
+
 
 void self_play_loop(player& black, player& white) {
     EngineInterface* engine = new SelfPlayEngine(&black, &white);
@@ -18,7 +20,13 @@ void self_play_loop(player& black, player& white) {
         std::cerr << "connection failed" << std::endl;
         exit(0);
     }
+    int games = 0;
     while (true) {
+        if (games % UPDATE_MODEL_FREQ == 0) {
+            std::cout << "[load new model]" << std::endl;
+            black.update_model("latest.pt");
+            white.update_model("latest.pt");
+        }
         engine->init_game(new episode());
         engine->open_episode();
         while(true) {
@@ -27,6 +35,7 @@ void self_play_loop(player& black, player& white) {
             engine->store_transition(move);
         }
         agent& winner = engine->close_episode();
+
         std::string raw_trajectory = 
             ((SelfPlayEngine*)engine)->get_trajectory();
         trajectory tra;
@@ -41,20 +50,18 @@ void self_play_loop(player& black, player& white) {
         learner_server->send(byte_int);
         learner_server->send(raw_trajectory);
         std::cerr << "send trajectory" << std::endl;
+
+        games++;
     }
 }
 
 int main(int argc, const char* argv[]) {
     std::cerr << "=====Traning Self Play=====" << std::endl;
     // std::string player_arg = 
-    //     "simulation=1000 explore=0.3 uct=normal parallel=1";
-    // player black("name=mcts method=mcts " + player_arg + " role=black");
-    // player white("name=mcts method=mcts " + player_arg + " role=white");
-    std::string player_arg = 
-        "method=alphazero model=/desktop/mcts/game/model_provider/test_model mode=training simulation=200";
+    //     "seed=33470 method=alphazero model=/desktop/mcts/game/model_provider/test_model mode=training simulation=200";
+    std::string player_arg =
+        "seed=33473 method=alphazero model=/desktop/weight/ mode=training simulation=200";
     player black("name=alphablack " + player_arg + " role=black");
     player white("name=alphawhite " + player_arg + " role=white");
-    black.update_model("fake_weight.pth");
-    white.update_model("fake_weight.pth");
     self_play_loop(black, white);
 }

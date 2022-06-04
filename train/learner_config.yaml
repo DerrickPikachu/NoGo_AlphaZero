@@ -4,12 +4,13 @@ model:
   input_size: [9, 9]
 
 optimizer:
-  learning_rate: 0.1
+  learning_rate: 0.01
   momentum: 0.9
   weight_decay: 1.e-4
   nesterov: True
 
 trainer:
+  epoch: 3
   batch_size: 512
   batch_to_train: 10
   checkpoint_freq: 5
@@ -19,6 +20,7 @@ trainer:
 
 replay_buffer:
   size: 15360
+  discount: 1
   store_path: /desktop/trajectory/rpb.obj
 
 game:
@@ -26,6 +28,6 @@ game:
 
 restore:
   iter: 0
-  active: True
+  active: False
 
-learn_from_dataset: True
+learn_from_dataset: False
