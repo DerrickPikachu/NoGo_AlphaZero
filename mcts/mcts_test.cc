@@ -1191,66 +1191,64 @@ protected:
 public:
   NetInterface* net;
   TreeInterface* tree;
+  std::default_random_engine engine;
 };
 
-// TEST_F(TreeSearchTest, MCTSTest) {
-//   Node* node = new Node(board(), board::piece_type::black);
-//   float root_value = node->expand(net);
-//   node->update(root_value);
-//   tree->set_root(node);
-//   for (int i = 0; i < 500; i++) {
-//     tree->select();
-//     float value = tree->expand();
-//     tree->update(value);
-//   }
-//   auto childs = ((NodeTest::WrapNode*)node)->get_childs();
-//   for (int i = 0; i < childs->size(); i++) {
-//     Node child = std::get<2>(childs->at(i));
-//     std::cout << child.get_visit_count() << " ";
-//   }
-//   std::cout << std::endl;
-//   delete node;
-// }
+TEST_F(TreeSearchTest, MCTSTest) {
+  Node* node = new Node(board(), board::piece_type::black);
+  float root_value = node->expand(net);
+  node->update(root_value);
+  tree->set_root(node);
+  for (int i = 0; i < 500; i++) {
+    tree->select();
+    float value = tree->expand();
+    tree->update(value);
+  }
+  auto childs = ((NodeTest::WrapNode*)node)->get_childs();
+  for (int i = 0; i < childs->size(); i++) {
+    Node child = std::get<2>(childs->at(i));
+    std::cout << child.get_visit_count() << " ";
+  }
+  std::cout << std::endl;
+  delete node;
+}
 
-// TEST_F(TreeSearchTest, MCTSWithLargeSimulationTest) {
-//   Node* node = new Node(board(), board::piece_type::black);
-//   float root_value = node->expand(net);
-//   node->update(root_value);
-//   tree->set_root(node);
-//   for (int i = 0; i < 5000; i++) {
-//     tree->select();
-//     float value = tree->expand();
-//     tree->update(value);
-//   }
-//   auto childs = ((NodeTest::WrapNode*)node)->get_childs();
-//   for (int i = 0; i < childs->size(); i++) {
-//     Node child = std::get<2>(childs->at(i));
-//     std::cout << child.get_visit_count() << " ";
-//   }
-//   std::cout << std::endl;
-//   delete node;
-// }
+TEST_F(TreeSearchTest, MCTSWithLargeSimulationTest) {
+  Node* node = new Node(board(), board::piece_type::black);
+  float root_value = node->expand(net);
+  node->update(root_value);
+  tree->set_root(node);
+  for (int i = 0; i < 5000; i++) {
+    tree->select();
+    float value = tree->expand();
+    tree->update(value);
+  }
+  auto childs = ((NodeTest::WrapNode*)node)->get_childs();
+  for (int i = 0; i < childs->size(); i++) {
+    Node child = std::get<2>(childs->at(i));
+    std::cout << child.get_visit_count() << " ";
+  }
+  std::cout << std::endl;
+  delete node;
+}
 
-// TEST_F(TreeSearchTest, MCTSCheckMemoryLeak) {
-//   board test_board;
-//   for (int i = 0; i < 10; i++) {
-//     Node* node = new Node(test_board, board::piece_type::black);
-    
-//     float root_value = node->expand(net);
-//     tree->set_root(node);
-//     for (int i = 0; i < 1000; i++) {
-//       tree->select();
-//       float value = tree->expand();
-//       tree->update(value);
-//     }
+TEST_F(TreeSearchTest, MCTSCheckMemoryLeak) {
+  board test_board;
+  for (int i = 0; i < 10; i++) {
+    Node* node = new Node(test_board, board::piece_type::black);
+    float root_value = node->expand(net);
+    tree->set_root(node);
+    for (int i = 0; i < 1000; i++) {
+      tree->select();
+      float value = tree->expand();
+      tree->update(value);
+    }
 
-//     board::point move = tree->get_action();
-//     test_board.place(move);
-//     std::cout << test_board << std::endl;
-//     tree->reset();
-//     delete node;
-//   }
-// }
+    board::point move = tree->get_action(engine);
+    test_board.place(move);
+    tree->reset();
+  }
+}
 
 class ModelTest : public ::testing::Test {
 protected:

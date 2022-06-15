@@ -538,8 +538,6 @@ public:
         history.clear();
     }
 
-    // TODO: [Important] must add the softmax of 
-    // the simulation count to choose action
     board::point get_action(std::default_random_engine& generator) override {
         return root->best_action(mode, generator);
     }

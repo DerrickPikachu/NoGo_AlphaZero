@@ -103,7 +103,11 @@ public:
 				board::size_x
 			);
 			net->exec_net();
-			mcts_tree = new Tree(net, std::string(meta["mode"]));
+			std::string mode = std::string(meta["mode"]);
+			mcts_tree = new Tree(net, mode);
+			if (mode == "evaluating") {
+				update_model(std::string(meta["model_name"]));
+			}
 		}
 	}
 

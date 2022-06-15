@@ -27,7 +27,7 @@ game:
   board_size: 9
 
 restore:
-  iter: 0
-  active: False
+  iter: 1555
+  active: True
 
 learn_from_dataset: False

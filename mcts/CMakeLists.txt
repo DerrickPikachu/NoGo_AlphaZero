@@ -39,6 +39,11 @@ add_executable(
   actor.cpp
 )
 
+add_executable(
+  nogo
+  game/nogo.cpp
+)
+
 target_link_libraries(
   mcts_test
   gtest_main

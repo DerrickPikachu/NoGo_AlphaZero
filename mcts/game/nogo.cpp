@@ -80,9 +80,7 @@ int main(int argc, const char* argv[]) {
 				if (who.check_for_win(game.state())) break;
 			}
 			agent& win = game.last_turns(black, white);
-//			std::cout << "winner: " << win.property("name") << std::endl;
 			stat.close_episode(win.name());
-//            std::cout << "end game" << std::endl;
 			black.close_episode(win.name());
 			white.close_episode(win.name());
 		}

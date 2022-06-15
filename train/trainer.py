@@ -74,6 +74,7 @@ class Trainer(TrainerInterface):
         self.optimizer.zero_grad()
         total_loss = p_loss + v_loss
         total_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.network.parameters(), 5)
         self.optimizer.step()
     
     def compute_loss(self, action: torch.Tensor, value: torch.Tensor,

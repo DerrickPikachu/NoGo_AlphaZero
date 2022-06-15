@@ -60,7 +60,7 @@ int main(int argc, const char* argv[]) {
     // std::string player_arg = 
     //     "seed=33470 method=alphazero model=/desktop/mcts/game/model_provider/test_model mode=training simulation=200";
     std::string player_arg =
-        "seed=33473 method=alphazero model=/desktop/weight/ mode=training simulation=200";
+        "seed=33474 method=alphazero model=/desktop/weight/ mode=training simulation=400";
     player black("name=alphablack " + player_arg + " role=black");
     player white("name=alphawhite " + player_arg + " role=white");
     self_play_loop(black, white);
